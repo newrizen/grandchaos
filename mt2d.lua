@@ -2,7 +2,7 @@
 mt2d={
 	timer=0,
 	user3d={},	--3d users
-	user={},		--users data
+	user={},	--users data
 	attach={},	--attached objects (pushing them)
 	playeranim={
 		stand={x=0/25,y=41/25,speed=1},

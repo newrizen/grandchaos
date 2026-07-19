@@ -489,14 +489,23 @@ end
 -- Checkpoints: chegar no bloco luminoso do fim do trecho + agachar
 local CHECKPOINT_EPSILON = 0.6
 
+-- Altura máxima (acima do chão, origin.y) em que o jogador ainda é
+-- considerado "em pé sobre o bloco" luminoso. Os blocos de fim/pouso de
+-- trecho ficam no chão (y = origin.y), mas várias plataformas aéreas
+-- passam exatamente nas mesmas colunas X — sem checar a altura, o
+-- jogador disparava a mensagem só por estar naquele X, mesmo pulando ou
+-- andando em cima de uma plataforma alta.
+local CHECKPOINT_Y_EPSILON = 2
+
 local function reached_checkpoint(player, origin, seg)
 	local mtplayer = mt2d.user[player:get_player_name()]
 	if not mtplayer or not mtplayer.object then return false end
 	local obj = mtplayer.object
         local pos = obj:get_pos()
 	if not pos then return false end
+	if math.abs(pos.y - origin.y) > CHECKPOINT_Y_EPSILON then return false end
 	local checkpoint_x = origin.x - end_marker_x(seg)
-	return pos.x <= (checkpoint_x + CHECKPOINT_EPSILON)
+	return math.abs(pos.x - checkpoint_x) <= CHECKPOINT_EPSILON
 end
 
 -- Chegou no bloco de POUSO do próprio trecho (usado para voltar ao
@@ -507,6 +516,7 @@ local function reached_landing(player, origin, seg)
 	local obj = mtplayer.object
         local pos = obj:get_pos()
 	if not pos then return false end
+	if math.abs(pos.y - origin.y) > CHECKPOINT_Y_EPSILON then return false end
 	local landing_x_pos = origin.x - landing_x(seg)
 	return math.abs(pos.x - landing_x_pos) <= CHECKPOINT_EPSILON
 end
@@ -758,7 +768,11 @@ c.register_globalstep(function(dtime)
 						data.landing_state = nil
 						teleport_to_end(player, data.origin, prev_seg)
 					end
-				else data.landing_state = nil
+				else
+					if data.landing_state ~= "wait" then
+						data.landing_state = "wait"
+						c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
+					end
 				end
 			else data.landing_state = nil
 			end

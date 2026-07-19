@@ -1,10 +1,11 @@
 -- grandchaos/entities.lua
 -- Entidades inimigas da Fase 1: Slime (básico), Arqueiro (à distância) e o chefe Ent.
-
+local c = core
+c.log("action", "[GrandChaos] entities.lua loaded")
 local function get_nearest_player(self, range)
 	local pos = self.object:get_pos()
 	local nearest, dist = nil, range
-	for _, player in ipairs(core.get_connected_players()) do
+	for _, player in ipairs(c.get_connected_players()) do
 		local ppos = player:get_pos()
 		local d = vector.distance(pos, ppos)
 		if d < dist then nearest, dist = player, d end
@@ -73,7 +74,7 @@ local function shake_camera(player, duration, strength, step_time)
 		sign = -sign
 		player:set_eye_offset({x = 0, y = sign * strength, z = 0}, {x = 0, y = sign * strength, z = 0})
 		elapsed = elapsed + step_time
-		core.after(step_time, step)
+		c.after(step_time, step)
 	end
 	step()
 end
@@ -84,9 +85,9 @@ local function apply_gravity(self)
 	local pos = self.object:get_pos()
 	if not pos then return end
 	local below = {x = pos.x, y = pos.y, z = pos.z} -- nó logo abaixo dos pés
-	local node = core.get_node_or_nil(below)
+	local node = c.get_node_or_nil(below)
 	if not node then return end
-	local def = core.registered_nodes[node.name]
+	local def = c.registered_nodes[node.name]
 	if def and def.walkable then self.object:set_acceleration({x = 0, y = 0, z = 0}) -- no chão
 	else self.object:set_acceleration({x = 0, y = GRAVITY, z = 0}) -- caindo
 	end
@@ -96,18 +97,18 @@ end
 -- se pos não for passado). Usado ao matar slime, arqueiro e o chefe.
 local function drop_items(pos, itemstrings)
 	if not pos then return end
-	for _, itemstring in ipairs(itemstrings) do core.add_item(pos, itemstring) end
+	for _, itemstring in ipairs(itemstrings) do c.add_item(pos, itemstring) end
 end
 
 -- Exibe um efeito de impacto temporário sobre o inimigo
 local function show_hit_effect(pos)
-	local effect = core.add_entity({x = pos.x, y = pos.y + 0.5, z = pos.z + 0.5}, "grandchaos:hit_effect")
+	local effect = c.add_entity({x = pos.x, y = pos.y + 0.5, z = pos.z + 0.5}, "grandchaos:hit_effect")
 	if effect then
-		core.after(0.12, function() if effect and effect:get_luaentity() then effect:remove() end end)
+		c.after(0.12, function() if effect and effect:get_luaentity() then effect:remove() end end)
 	end
 end
 
-core.register_entity("grandchaos:hit_effect", {
+c.register_entity("grandchaos:hit_effect", {
 	initial_properties = {
 		physical = false,
 		collide_with_objects = false,
@@ -126,11 +127,11 @@ core.register_entity("grandchaos:hit_effect", {
 
 -- SLIME: inimigo básico corpo a corpo, pouca vida, avança e ataca
 local use_alpha
-	if core.features and core.features.use_texture_alpha_string then use_alpha = "blend"
+	if c.features and c.features.use_texture_alpha_string then use_alpha = "blend"
 	else use_alpha = true
 end
 
-core.register_entity("grandchaos:slime", {
+c.register_entity("grandchaos:slime", {
 	initial_properties = {
 		hp_max = 18,
 		physical = true,
@@ -167,9 +168,17 @@ core.register_entity("grandchaos:slime", {
 	-- drops ao morrer
 	drops = {"grandchaos:copper_coin 2"},
 	animation = { speed_normal = 1, stand_start = 0, stand_end = 0, walk_start = 0, walk_end = 0.63 },
-	sounds = { footstep = "nh_slime", random = "slime_som", damage = "nh_slimehurt" },
+	sounds = { footstep = "nh_slime", jump = "slime_som", damage = "nh_slimehurt" },
 	sound_timer = 0,
 	sound_interval = 8,
+	-- controle do som de passo enquanto anda (separado do sound_timer/
+	-- sound_interval acima, que é um som aleatório e ambiente, não ligado
+	-- ao andar em si)
+	footstep_timer = 0,
+	footstep_interval = 1,
+	-- volume do som de passo (bem mais baixo que o padrão do sound_play,
+	-- que é 1.0, já que "nh_slime" estava saindo alto demais)
+	footstep_gain = 0.1,
 	-- controle de estado da animação
 	anim_state = nil,
 	-- função auxiliar: só troca animação se o estado mudou
@@ -189,7 +198,7 @@ core.register_entity("grandchaos:slime", {
 		show_hit_effect(self.object:get_pos())
 		self.hp = self.hp - (damage or 1)
 		if self.sounds and self.sounds.damage then
-			core.sound_play(self.sounds.damage, {object = self.object, max_hear_distance = 10}, true)
+			c.sound_play(self.sounds.damage, {object = self.object, max_hear_distance = 10}, true)
 		end
 		-- recuo ao receber dano
 		if dir then
@@ -212,7 +221,7 @@ core.register_entity("grandchaos:slime", {
 		if self.sound_timer >= self.sound_interval then
 			self.sound_timer = 0
 			if self.sounds and self.sounds.random and math.random() < 0.5 then
-				core.sound_play(self.sounds.random, {object = self.object, max_hear_distance = 10}, true)
+				c.sound_play(self.sounds.random, {object = self.object, max_hear_distance = 10}, true)
 			end
 		end
 		-- enquanto o recuo do golpe está ativo, mantém o impulso (deixa a
@@ -222,6 +231,7 @@ core.register_entity("grandchaos:slime", {
 		if not target then
 			self.object:set_velocity({x = 0, y = 0, z = 0})
 			self:set_anim("stand")
+			self.footstep_timer = 0
 			return
 		end
 		local visual = get_player_visual(target)
@@ -249,10 +259,19 @@ core.register_entity("grandchaos:slime", {
 		    local dir_x = dx > 0 and 1 or -1
 		    self.object:set_velocity({x = dir_x * self.speed, y = self.object:get_velocity().y, z = 0})
 		    self:set_anim("walk")
-		    -- ... som de passo
+		    -- som de passo, tocado em intervalos enquanto anda (não a
+		    -- cada tick, senão viraria um som contínuo/estridente)
+		    self.footstep_timer = self.footstep_timer + dtime
+		    if self.footstep_timer >= self.footstep_interval then
+			self.footstep_timer = 0
+			if self.sounds and self.sounds.footstep then
+			    c.sound_play(self.sounds.footstep, {object = self.object, max_hear_distance = 10, gain = self.footstep_gain}, true)
+			end
+		    end
 		else
 		    self.object:set_velocity({x = 0, y = self.object:get_velocity().y, z = 0})
 		    self:set_anim("stand")
+		    self.footstep_timer = 0
  		   if self.attack_cooldown <= 0 then
  		       self.attack_cooldown = 1.0
   		      target:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = self.damage}}, nil)
@@ -264,9 +283,8 @@ core.register_entity("grandchaos:slime", {
 		end
 	end,
 })
-
 -- FLECHA: projétil usado pelo arqueiro
-core.register_entity("grandchaos:arrow", {
+c.register_entity("grandchaos:arrow", {
 	initial_properties = {
 		hp_max = 1,
 		physical = false,
@@ -283,9 +301,9 @@ core.register_entity("grandchaos:arrow", {
 		if self.timer > 3 then self.object:remove() return end
 		local pos = self.object:get_pos()
 		-- Desaparece ao atingir qualquer bloco sólido (não-ar) no seu caminho
-		local node = core.get_node_or_nil(pos)
+		local node = c.get_node_or_nil(pos)
 		if node and node.name ~= "air" then self.object:remove() return end
-		for _, player in ipairs(core.get_connected_players()) do
+		for _, player in ipairs(c.get_connected_players()) do
 			local visual = get_player_visual(player)
 			if vector.distance(pos, visual:get_pos()) < 0.1 then
 				player:punch(self.object, 1.0, {full_punch_interval = 1.0, damage_groups = {fleshy = self.damage}}, nil)
@@ -297,7 +315,7 @@ core.register_entity("grandchaos:arrow", {
 })
 
 -- FLECHA: projétil usado pelo arqueiro
-core.register_entity("grandchaos:fruit", {
+c.register_entity("grandchaos:fruit", {
 	initial_properties = {
 		hp_max = 1,
 		physical = false,
@@ -317,7 +335,7 @@ core.register_entity("grandchaos:fruit", {
 		self.timer = self.timer + dtime
 		if self.timer > 3 then self.object:remove() return end
 		local pos = self.object:get_pos()
-		for _, player in ipairs(core.get_connected_players()) do
+		for _, player in ipairs(c.get_connected_players()) do
 			local visual = get_player_visual(player)
 			local ppos = visual:get_pos()
 			local dx = math.abs(ppos.x - pos.x)
@@ -333,7 +351,7 @@ core.register_entity("grandchaos:fruit", {
 })
 
 -- ARQUEIRO: inimigo à distância, mantém distância e atira flechas
-core.register_entity("grandchaos:archer", {
+c.register_entity("grandchaos:archer", {
 	initial_properties = {
 		hp_max = 30,
 		physical = true,
@@ -397,7 +415,7 @@ core.register_entity("grandchaos:archer", {
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
 		if self.dead then return true end
 		show_hit_effect(self.object:get_pos())
-		core.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
+		c.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
 		-- recuo ao receber dano
 		if dir then
 			self.object:set_velocity({x = dir.x * self.hit_knockback_speed, y = self.hit_hop_speed, z = 0})
@@ -407,21 +425,21 @@ core.register_entity("grandchaos:archer", {
 		self.hp = self.hp - (damage or 1)
 		if self.hp <= 0 then
 			self.dead = true
-			core.sound_play(self.sounds.die, {pos = self.object:get_pos(), max_hear_distance = 12, gain = 1})
+			c.sound_play(self.sounds.die, {pos = self.object:get_pos(), max_hear_distance = 12, gain = 1})
 			self.object:set_velocity({x = 0, y = 0, z = 0})
 			self.object:set_acceleration({x = 0, y = 0, z = 0})
 			self.object:set_properties({physical = false})
 			self:set_anim("die", true)
 			local drop_pos = self.object:get_pos()
 			local drops = self.drops
-			core.after(1.2, function()
+			c.after(1.2, function()
 				drop_items(drop_pos, drops)
 				if self.object then self.object:remove() end
 				if grandchaos then grandchaos.on_mob_death(self) end
 			end)
 			return true
 		end
-		local now = core.get_us_time() / 1e6
+		local now = c.get_us_time() / 1e6
 		if self.sit_timer <= 0 then
 			if (now - self.last_hit_time) <= self.hit_window then self.hit_count = self.hit_count + 1
 			else self.hit_count = 1
@@ -492,14 +510,14 @@ core.register_entity("grandchaos:archer", {
 			local recoil_dir = (dx > 0) and -1 or 1
 			self.object:set_velocity({x = recoil_dir * self.knockback_speed, y = self.hop_speed, z = 0})
 			local dir = vector.direction({x = pos.x, y = pos.y + 1.2, z = pos.z}, tpos)
-			local arrow = core.add_entity({x = pos.x, y = pos.y + 1.2, z = pos.z}, "grandchaos:arrow")
+			local arrow = c.add_entity({x = pos.x, y = pos.y + 1.2, z = pos.z}, "grandchaos:arrow")
 			if arrow then arrow:set_velocity({x = dir.x * 8, y = dir.y * 8, z = dir.z * 8}) end
 		end
 	end,
 })
 
 -- Ent CHEFE: chefe da fase, muita vida, ataque em área
-core.register_entity("grandchaos:boss", {
+c.register_entity("grandchaos:boss", {
 	initial_properties = {
 		hp_max = 160,
 		physical = true,
@@ -560,20 +578,20 @@ core.register_entity("grandchaos:boss", {
 	end,
 	on_activate = function(self, staticdata)
 		self.object:set_armor_groups({fleshy = 100})
-		core.chat_send_all("[Fase 1] O Ent Guardião desperta! Prepare-se!")
+		c.chat_send_all("[Fase 1] O Ent Guardião desperta! Prepare-se!")
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
 		if self.dead then return true end
 		show_hit_effect(self.object:get_pos())
-		core.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
+		c.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
 		-- Recuo apenas em X e Y
 		if dir then self.object:set_velocity({x = dir.x * 2.0, y = math.max(0, dir.y) * 2.0 + 3.5, z = 0}) end
 		self.hp = self.hp - (damage or 1)
 		if grandchaos then grandchaos.on_boss_damaged(self) end
 			if self.hp <= 0 then
 				self.dead = true
-				core.sound_play(self.sounds.die, {pos = self.object:get_pos(), max_hear_distance = 12, gain = 1})
+				c.sound_play(self.sounds.die, {pos = self.object:get_pos(), max_hear_distance = 12, gain = 1})
 				self.state = "idle"
 				self.object:set_velocity({x = 0, y = 0, z = 0})
 				self.object:set_acceleration({x = 0, y = 0, z = 0})
@@ -581,7 +599,7 @@ core.register_entity("grandchaos:boss", {
 				self:set_anim("die", true)
 				local drop_pos = self.object:get_pos()
 				local drops = self.drops
-				core.after(1.2, function()
+				c.after(1.2, function()
 					drop_items(drop_pos, drops)
 					if self.object then self.object:remove() end
 					if grandchaos then grandchaos.on_boss_death(self) end
@@ -592,15 +610,15 @@ core.register_entity("grandchaos:boss", {
 	end,
 	-- executa o golpe em área de fato (chamado após a sentada)
 	do_slam = function(self)
-		core.chat_send_all("[Ent] Golpe Sísmico!")
+		c.chat_send_all("[Ent] Golpe Sísmico!")
 		local center = self.object:get_pos()
-		for _, player in ipairs(core.get_connected_players()) do
+		for _, player in ipairs(c.get_connected_players()) do
 			local ppos = player:get_pos()
 			local pd = math.abs(rail_distance_x(center, ppos))
 			-- verifica se o jogador está apoiado no chão
 			local below = {x = ppos.x, y = ppos.y, z = ppos.z}
-			local node = core.get_node_or_nil(below)
-			local def = node and core.registered_nodes[node.name]
+			local node = c.get_node_or_nil(below)
+			local def = node and c.registered_nodes[node.name]
 			local on_ground = def and def.walkable
 			if pd < 4.5 and on_ground then player:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 4}}, nil) end
 		end
@@ -611,7 +629,7 @@ core.register_entity("grandchaos:boss", {
 		local pos = self.object:get_pos()
 		local origin = {x = pos.x, y = pos.y + 1.5, z = tpos.z}
 		local dir = vector.direction({x = origin.x, y = origin.y, z = tpos.z}, {x = tpos.x, y = tpos.y, z = tpos.z})
-		local arrow = core.add_entity(origin, "grandchaos:fruit")
+		local arrow = c.add_entity(origin, "grandchaos:fruit")
 		if arrow then arrow:set_velocity({x = dir.x * 8, y = dir.y * 8, z = 0}) end
 		self.punch_timer = self.punch_duration
 		self:set_anim("punch", true)
@@ -630,8 +648,8 @@ core.register_entity("grandchaos:boss", {
 			-- quando tocar o chão, começa a sentar
 			local pos = self.object:get_pos()
 			local below = vector.offset(pos, 0, -0.1, 0)
-			local node = core.get_node_or_nil(below)
-			local def = node and core.registered_nodes[node.name]
+			local node = c.get_node_or_nil(below)
+			local def = node and c.registered_nodes[node.name]
 			if def and def.walkable and self.object:get_velocity().y <= 0 then
 				self.state = "sitting"
 				self.sit_timer = self.sit_duration
@@ -642,7 +660,7 @@ core.register_entity("grandchaos:boss", {
 				-- aterrissa e senta, simulando o impacto no chão
 				local shake_range = 10
 				local center = self.object:get_pos()
-				for _, player in ipairs(core.get_connected_players()) do
+				for _, player in ipairs(c.get_connected_players()) do
 					local pd = math.abs(rail_distance_x(center, player:get_pos()))
 					if pd < shake_range then shake_camera(player, 0.5, 0.4, 0.05) end
 				end

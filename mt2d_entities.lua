@@ -41,7 +41,7 @@ minetest.register_entity("grandchaos:cam",{
 			self.ob:set_properties({
 				textures={"mt2d_air.png",mt2d.user[self.username].texture},
 				nametag=self.username,
-				nametag_color="#FFFFFF"
+				nametag_color="#FFFFFF",
 			})
 
 			self.user:set_properties({
@@ -135,6 +135,9 @@ minetest.register_entity("grandchaos:cam",{
 		-- deixa de segurar shift/S, pra animação poder tocar de novo da
 		-- próxima vez que ele agachar parado
 		if not (key.sneak or key.down) then pob.sneak_anim_played=false end
+		-- solta a trava do som de ataque assim que o jogador para de
+		-- segurar o botão, pra poder tocar de novo no próximo golpe
+		if not (key.RMB or key.LMB) then pob.punch_anim_played=false end
 		-- ao sair do stagger, devolve a gravidade normal ao jogador (durante
 		-- o stagger ela fica zerada pra ele ficar "deitado" no chão sem cair)
 		-- e restaura a colisão física (durante o stagger ele fica intangível
@@ -159,6 +162,7 @@ minetest.register_entity("grandchaos:cam",{
 			if not pob.stagger_anim_played then
 				pob.stagger_anim_played=true
 				mt2d.player_anim(self,"lay")
+				minetest.sound_play("character_die", {object=self.ob, gain=0.5, max_hear_distance=16}, true)
 				-- mt2d.player_anim liga a animação com loop (igual faz pra
 				-- "walk"/"stand"), mas "lay" aqui é a queda, não deve
 				-- repetir -- força frame_loop=false pra tocar uma vez e
@@ -174,9 +178,14 @@ minetest.register_entity("grandchaos:cam",{
 			v={x=0,y=0,z=0}
 			self.ob:set_acceleration({x=0,y=0,z=0})
 			mt2d.player_anim(self,"lay")
+			if not pob.laying_sound_played then
+				pob.laying_sound_played=true
+				minetest.sound_play("character_die", {object=self.ob, gain=0.5, max_hear_distance=16}, true)
+			end
 			if key.up or key.left or key.right or self.wakeup then
 				self.laying=nil
 				self.wakeup=nil
+				pob.laying_sound_played=false
 				self.ob:set_acceleration({x=0,y=-20,z=0})
 			end
 		elseif key.up and (v.y==0 or self.floating) and self.jump_timer <= 0 then
@@ -225,6 +234,10 @@ minetest.register_entity("grandchaos:cam",{
 		elseif key.RMB or key.LMB then
 			mt2d.player_anim(self,"mine")
 			v.x=0
+			if not pob.punch_anim_played then
+				pob.punch_anim_played=true
+				minetest.sound_play("character_punch", {object=self.ob, gain=0.1, max_hear_distance=16}, true)
+			end
 		elseif key.aux1 and 	minetest.check_player_privs(self.username, {leave2d=true}) then
 			mt2d.to_3dplayer(self.user)
 			return
@@ -359,12 +372,15 @@ minetest.register_entity("grandchaos:player",{
 			self.ob=self.object
 			self.ob:get_luaentity().dead=true
 			mt2d.player_anim(self,"lay")
+			-- toca o som de morte uma única vez (o ramo acima roda a
+			-- cada on_step enquanto o hp continuar <=0)
+			if not self.die_sound_played then
+				self.die_sound_played=true
+				minetest.sound_play("character_die", {object=self.object, gain=0.5, max_hear_distance=16}, true)
+			end
 		elseif self.timer>3 then
 			self.timer=0
-			if not self.user:get_attach() then
-				mt2d.new_player(self.user)
-				return
-			end
+			if not self.user:get_attach() then mt2d.new_player(self.user) return end
 		end
 	end,
 	id=0,

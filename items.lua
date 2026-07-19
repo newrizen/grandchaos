@@ -111,6 +111,39 @@ core.register_node("grandchaos:floor2", {
 	on_blast = function() end,
 	groups = {not_in_creative_inventory = 1, immortal = 1},
 })
+-- Vidro indestrutível: mesma aparência e som do default:glass, mas
+-- indiquebrável, para uso na fase (paredes, janelas, etc.)
+core.register_node("grandchaos:glassblock", {
+	description = S("Glass") .. "\n" .. S("Stage Teleporter [OFF]"),
+	drawtype = "glasslike",
+	tiles = {"default_glass.png"},
+	paramtype = "light",
+	sunlight_propagates = true,
+	is_ground_content = false,
+	walkable = true,
+	diggable = false,
+	pointable = true,
+	on_blast = function() end,
+	groups = {not_in_creative_inventory = 1, immortal = 1},
+	sounds = default.node_sound_glass_defaults(),
+})
+-- Mese lamp indestrutível: mesma aparência, som e luz do default:meselamp,
+-- porém indiquebrável, para uso como iluminação fixa da fase.
+core.register_node("grandchaos:meselamp", {
+	description = S("Mese Lamp") .. "\n" .. S("Stage Teleporter [ON]"),
+	drawtype = "glasslike",
+	tiles = {"default_meselamp.png"},
+	paramtype = "light",
+	sunlight_propagates = true,
+	is_ground_content = false,
+	light_source = default.LIGHT_MAX,
+	walkable = true,
+	diggable = false,
+	pointable = true,
+	on_blast = function() end,
+	groups = {not_in_creative_inventory = 1, immortal = 1},
+	sounds = default.node_sound_glass_defaults(),
+})
 -- Portal de início / reinício da fase
 core.register_node("grandchaos:portal", {
 	description = S("Aria Forest Portal") .. "\n" .. S("Right-click to start Stage 1"),
