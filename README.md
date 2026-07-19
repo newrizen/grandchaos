@@ -1,4 +1,19 @@
-# **GrandChaos - Fase 1 (Floresta de Aria)**  
+<div align="center">
+
+# **GrandChaos - Fase 1 (Floresta de Aria)**
+
+  <a href="https://www.minetest.net/">
+    <img src="https://img.shields.io/badge/Minetest-5.15+-blue?logo=minetest">
+  </a>
+  <img src="https://img.shields.io/badge/version-prealpha-red">
+
+  GrandChaos, a Minetest Game (Luanti) mod based in GrandChase
+
+  <img 
+    src="https://github.com/newrizen/grandchaos/blob/main/images/screenshot_20260719_112754.png"
+    alt="GrandChaos Screenshot"
+    width="350">
+</div>
 Mod para **Luanti / Minetest Game** que recria, à sua maneira, a primeira fase do jogo GrandChase: um corredor de combate em   **trilho** (o personagem só se move para frente e para trás, sem deslocamento lateral), dividido em trechos fechados por   **paredes de tronco permanentes e indestrutíveis**, com 3 trechos de inimigos e um chefe final. Os próprios inimigos também só andam para frente/para trás, como o jogador. O mod inclui ainda um modo visual 2D experimental (mt2d), usado durante toda a fase.
 ## **Instalação**  
 1. Copie a pasta grandchaos inteira para a pasta de mods do seu jogo/mundo, por exemplo:
