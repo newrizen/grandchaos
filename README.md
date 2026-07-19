@@ -14,6 +14,12 @@
     alt="GrandChaos Screenshot"
     width="350">
 </div>
+
+<div>
+  
+>[!IMPORTANT]
+>This game is experimental, so expect to encounter many bugs and incomplete features.
+  
 Mod para **Luanti / Minetest Game** que recria, à sua maneira, a primeira fase do jogo GrandChase: um corredor de combate em   **trilho** (o personagem só se move para frente e para trás, sem deslocamento lateral), dividido em trechos fechados por   **paredes de tronco permanentes e indestrutíveis**, com 3 trechos de inimigos e um chefe final. Os próprios inimigos também só andam para frente/para trás, como o jogador. O mod inclui ainda um modo visual 2D experimental (mt2d), usado durante toda a fase.
 ## **Instalação**  
 1. Copie a pasta grandchaos inteira para a pasta de mods do seu jogo/mundo, por exemplo:
@@ -73,5 +79,8 @@ local NUM_WAVE_SEGMENTS = 4    -- trechos de onda (o 1º fica vazio de inimig
    
  E em WAVE_COMPOSITION (também em init.lua) você define quais e quantos inimigos (grandchaos:slime e/ou grandchaos:archer) aparecem em cada trecho de onda.  
    
- Vida, dano e velocidade de cada inimigo estão em entities.lua, nas tabelas initial_properties/campos de cada core.register_entity.  
-
+ Vida, dano e velocidade de cada inimigo estão em entities.lua, nas tabelas initial_properties/campos de cada core.register_entity.
+## External Mod
+Modified mod used to this game:
+- Minetest 2D (mt2d) - 2D mod for Minetest Game [Game Page]([https://codeberg.org/tenplus1/mobs_redo.git](https://content.luanti.org/packages/AiTechEye/mt2d/))
+</div>
