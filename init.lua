@@ -19,9 +19,16 @@
 -- Z é sempre fixo (é o "para dentro da tela", usado só pelo offset da
 -- câmera, cam.z = obj.z + 5) e nunca muda sozinho com o jogador andando.
 -- Uso em jogo: comando /gcstart (ou clicar no portal).
+--
+-- NOTA DE TRADUÇÃO: todos os textos exibidos ao jogador (mensagens de
+-- chat, HUD, descrições de comandos) estão em inglês no código-fonte e
+-- passam pelo tradutor (S = core.get_translator("grandchaos")). A
+-- tradução para português (pt-BR) fica em locale/grandchaos.pt.tr.
+local c = core
+c.log("action", "[GrandChaos] init.lua loaded")
+local S = c.get_translator("grandchaos")
 
 grandchaos = {}
-
 local WIDTH = 4             -- largura do corredor (eixo Z, travado/trilho)
 local HEIGHT = 15             -- altura do corredor (eixo Y)
 local SEG_LEN = 40            -- comprimento de cada trecho (eixo X) — inalterado
@@ -46,7 +53,9 @@ local players_data = {}
 -- grandchaos.hide_hint, chamado no /join2d em mt2d.lua e no /gcstart
 -- logo abaixo).
 local hud_hint = {}
-local HINT_TEXT = "Escreva '/gcstart' para iniciar o jogo ('/gcreset' elimina a fase)\nOu escreva '/join2d' para só testar o modo 2D [experimental]\n(voltar ao 3D: no criativo, use '/grantme leave2d' e '/leave2d')"
+local function hint_text()
+	return S("Type '/gcstart' to start the game ('/gcreset' cancels the stage)@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: in creative, use '/grantme leave2d' and '/leave2d')")
+end
 
 function grandchaos.show_hint(player)
 	local pname = player:get_player_name()
@@ -57,22 +66,22 @@ function grandchaos.show_hint(player)
 		offset = {x = 0, y = 20},
 		alignment = {x = 0, y = 1},
 		number = 0xFFFFFF,
-		text = HINT_TEXT,
+		text = hint_text(),
 	})
 end
 
 function grandchaos.hide_hint(pname)
-	local player = core.get_player_by_name(pname)
+	local player = c.get_player_by_name(pname)
 	if player and hud_hint[pname] then player:hud_remove(hud_hint[pname]) end
 	hud_hint[pname] = nil
 end
 
-core.register_on_leaveplayer(function(player)
+c.register_on_leaveplayer(function(player)
 	hud_hint[player:get_player_name()] = nil
 end)
 
-dofile(core.get_modpath("grandchaos") .. "/items.lua")
-dofile(core.get_modpath("grandchaos") .. "/entities.lua")
+dofile(c.get_modpath("grandchaos") .. "/items.lua")
+dofile(c.get_modpath("grandchaos") .. "/entities.lua")
 
 mt2d = {
     timer = 0,
@@ -90,8 +99,8 @@ mt2d = {
     },
 }
 
-dofile(core.get_modpath("grandchaos").."/mt2d_entities.lua")
-dofile(core.get_modpath("grandchaos").."/mt2d.lua")
+dofile(c.get_modpath("grandchaos").."/mt2d_entities.lua")
+dofile(c.get_modpath("grandchaos").."/mt2d.lua")
 
 -- Comprimento "ocupado" por um trecho + a parede que vem logo depois dele.
 local SEG_SPAN = SEG_LEN + WALL_THICKNESS
@@ -126,10 +135,10 @@ local LAMP_OFF = "default:glass"
 local function end_lamp_pos(origin, seg) return {x = origin.x - end_marker_x(seg), y = origin.y, z = origin.z} end
 local function landing_lamp_pos(origin, seg) return {x = origin.x - landing_x(seg), y = origin.y, z = origin.z} end
 local function set_end_lamp(origin, seg, lit)
-	core.set_node(end_lamp_pos(origin, seg), {name = lit and LAMP_ON or LAMP_OFF})
+	c.set_node(end_lamp_pos(origin, seg), {name = lit and LAMP_ON or LAMP_OFF})
 end
 local function set_landing_lamp(origin, seg, lit)
-	core.set_node(landing_lamp_pos(origin, seg), {name = lit and LAMP_ON or LAMP_OFF})
+	c.set_node(landing_lamp_pos(origin, seg), {name = lit and LAMP_ON or LAMP_OFF})
 end
 
 -- Acende/apaga os dois blocos luminosos de um trecho (pouso e fim) juntos.
@@ -181,40 +190,40 @@ local function build_arena(origin)
 		if z == min_z and math.random(8) == 1 then leaf_height = math.random(1, 3) end
 			for y = -10, HEIGHT + 2 do
 				local p = {x = origin.x - x, y = origin.y + y, z = origin.z + z}
-				local key = core.hash_node_position(p)
-				saved[key] = {pos = p, node = core.get_node(p)}
+				local key = c.hash_node_position(p)
+				saved[key] = {pos = p, node = c.get_node(p)}
 				if y == 0 then
-					if z == bg2_z then core.set_node(p, {name="grandchaos:floor1"})
-					elseif z == bg3_z then core.set_node(p, {name="grandchaos:floor2"})
-					else core.set_node(p, {name="grandchaos:floor1"})
+					if z == bg2_z then c.set_node(p, {name="grandchaos:floor1"})
+					elseif z == bg3_z then c.set_node(p, {name="grandchaos:floor2"})
+					else c.set_node(p, {name="grandchaos:floor1"})
 					end
 
 				elseif y <= -1 and y >= -10 then
-					if z == bg2_z or z == bg3_z then core.set_node(p, {name="grandchaos:floor2"})
-					else core.set_node(p, {name="grandchaos:floor2"})
+					if z == bg2_z or z == bg3_z then c.set_node(p, {name="grandchaos:floor2"})
+					else c.set_node(p, {name="grandchaos:floor2"})
 					end
 
 				elseif z == min_z then
 					-- parede principal
-					if y >= HEIGHT then core.set_node(p,{name="default:leaves"})
-					elseif wall_leaves[x..":"..y] then core.set_node(p,{name="default:leaves"})
-					else core.set_node(p,{name="grandchaos:trunk_wall"})
+					if y >= HEIGHT then c.set_node(p,{name="default:leaves"})
+					elseif wall_leaves[x..":"..y] then c.set_node(p,{name="default:leaves"})
+					else c.set_node(p,{name="grandchaos:trunk_wall"})
 					end
 
 				elseif z == bg1_z or z == bg2_z or z == bg3_z then
 					-- camadas de vegetação atrás da parede
-					if y >= HEIGHT then core.set_node(p,{name="default:leaves"})
-					elseif math.random() < 0.35 then core.set_node(p,{name="default:leaves"})
-					else core.set_node(p,{name="air"})
+					if y >= HEIGHT then c.set_node(p,{name="default:leaves"})
+					elseif math.random() < 0.35 then c.set_node(p,{name="default:leaves"})
+					else c.set_node(p,{name="air"})
 					end
 
 				elseif z == max_z then
-					if y >= HEIGHT then core.set_node(p,{name="default:leaves"})
-					else core.set_node(p,{name="air"})
+					if y >= HEIGHT then c.set_node(p,{name="default:leaves"})
+					else c.set_node(p,{name="air"})
 					end
 
-				elseif y >= HEIGHT then core.set_node(p,{name="default:leaves"})
-				else core.set_node(p,{name="air"})
+				elseif y >= HEIGHT then c.set_node(p,{name="default:leaves"})
+				else c.set_node(p,{name="air"})
 				end
 			end
 		end
@@ -223,7 +232,7 @@ local function build_arena(origin)
 	-- agora com WALL_THICKNESS blocos de espessura.
 	for wx = 1, WALL_THICKNESS do
 		for z = min_z, max_z do
-			for y = 1, HEIGHT - 1 do core.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
+			for y = 1, HEIGHT - 1 do c.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
 		end
 	end
 	-- Paredes ao final de cada trecho (inclui a que fecha o trecho do
@@ -231,21 +240,21 @@ local function build_arena(origin)
 	for seg = 1, TOTAL_SEGMENTS do
 		for wx = wall_x_start(seg), wall_x_end(seg) do
 			for z = min_z, max_z do
-				for y = 1, HEIGHT - 1 do core.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
+				for y = 1, HEIGHT - 1 do c.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
 			end
 		end
 		-- Bloco luminoso de FIM do trecho (LAMP_GAP blocos antes da
 		-- parede) — começa apagado; só acende quando todos os inimigos
 		-- do trecho forem derrotados (ver set_end_lamp, spawn_wave e
 		-- grandchaos.spawn_boss).
-		core.set_node({x = origin.x - end_marker_x(seg), y = origin.y, z = origin.z}, {name = LAMP_OFF})
+		c.set_node({x = origin.x - end_marker_x(seg), y = origin.y, z = origin.z}, {name = LAMP_OFF})
 		-- Bloco luminoso de POUSO no início do trecho (LAMP_GAP blocos
 		-- após a parede anterior) — aceso desde o início só no trecho 1
 		-- (não há trecho anterior para voltar); nos demais começa como
 		-- vidro (apagado) e só vira meselamp quando o próprio trecho for
 		-- totalmente limpo, podendo então ser usado para retornar ao
 		-- trecho anterior (ver set_segment_lamps).
-		core.set_node({x = origin.x - landing_x(seg), y = origin.y, z = origin.z}, {name = (seg == 1) and LAMP_ON or LAMP_OFF})
+		c.set_node({x = origin.x - landing_x(seg), y = origin.y, z = origin.z}, {name = (seg == 1) and LAMP_ON or LAMP_OFF})
 		-- Plataformas aéreas na trilha central
 		local function make_row(y, min_len, max_len, gap, begin_x, finish_x)
 			local x = begin_x
@@ -253,7 +262,7 @@ local function build_arena(origin)
 				local len = math.random(min_len, max_len)
 				for dx = 0, len - 1 do
 					if x + dx <= finish_x then
-						core.set_node({x = origin.x - (x + dx), y = origin.y + y, z = origin.z},
+						c.set_node({x = origin.x - (x + dx), y = origin.y + y, z = origin.z},
 						{name = "grandchaos:trunk_platform", param2 = 12})
 					end
 				end
@@ -261,7 +270,7 @@ local function build_arena(origin)
 				for i = 1, math.random(0,1) do
 					local mx = x + math.random(0, len - 1)
 					local mp = {x = origin.x - mx, y = origin.y + y + 1, z = origin.z}
-					if core.get_node(mp).name == "air" then core.set_node(mp,{name="flowers:mushroom_brown"}) end
+					if c.get_node(mp).name == "air" then c.set_node(mp,{name="flowers:mushroom_brown"}) end
 				end
 				x = x + len + math.random(gap[1], gap[2])
 			end
@@ -345,7 +354,7 @@ local function build_arena(origin)
 			local height = 3
 			for x = landing_x(seg)+2, seg_x_end(seg)-3, 5 do
 				for dx = 0,2 do
-					core.set_node({x = origin.x-(x+dx), y = origin.y+height, z = origin.z},
+					c.set_node({x = origin.x-(x+dx), y = origin.y+height, z = origin.z},
 					{name="grandchaos:trunk_platform", param2=12})
 				end
 				if height==3 then height=6
@@ -355,7 +364,7 @@ local function build_arena(origin)
 		end
 	end
 	-- Área "fora dos trechos", além da parede do chefe
-	for z = min_z, max_z do core.set_node ({x = origin.x - total_len, y = origin.y, z = origin.z + z}, {name = "default:goldblock"}) end
+	for z = min_z, max_z do c.set_node ({x = origin.x - total_len, y = origin.y, z = origin.z + z}, {name = "default:goldblock"}) end
 	-- Pontos já ocupados por decoração ou reservados (lâmpadas/vidros)
 	local used = {}
 	-- Reserva as posições dos blocos luminosos
@@ -374,17 +383,17 @@ local function build_arena(origin)
 	-- 15 a 20 matos baixos
 	for i = 1, math.random(15, 20) do
 		local p = random_floor_pos()
-		if p and core.get_node(p).name == "air" then core.set_node(p, {name = "default:grass_3"}) end
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:grass_3"}) end
 	end
 	-- 10 a 15 arbustos secos
 	for i = 1, math.random(10, 15) do
 		local p = random_floor_pos()
-		if p and core.get_node(p).name == "air" then core.set_node(p, {name = "default:dry_shrub"}) end
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:dry_shrub"}) end
 	end
 	-- 10 a 15 arbustos secos
 	for i = 1, math.random(5, 7) do
 		local p = random_floor_pos()
-		if p and core.get_node(p).name == "air" then core.set_node(p, {name = "flowers:mushroom_red"}) end
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "flowers:mushroom_red"}) end
 	end
 	return saved, total_len
 end
@@ -446,7 +455,7 @@ local function spawn_wave(player, seg)
 			}
 		else pos = {x = math.random(xmin, xmax), y = origin.y + 1, z = origin.z}
 		end
-		local obj = core.add_entity(pos, mob_name)
+		local obj = c.add_entity(pos, mob_name)
 		if obj then
 			table.insert(data.alive_mobs, obj)
 			local le = obj:get_luaentity()
@@ -564,18 +573,18 @@ local function try_drop_through_platform(player, data, drop_pressed)
 	local swapped = {}
 	for dx = -1, 1 do
 		local under = {x = base_x + dx, y = under_y, z = data.origin.z}
-		if core.get_node(under).name == "grandchaos:trunk_platform" then
-			core.set_node(under, {name = "grandchaos:trunk_platform_ghost", param2 = 12})
+		if c.get_node(under).name == "grandchaos:trunk_platform" then
+			c.set_node(under, {name = "grandchaos:trunk_platform_ghost", param2 = 12})
 			table.insert(swapped, under)
 		end
 	end
 	if #swapped == 0 then return end
 	data.dropping = true
 	local pname = player:get_player_name()
-	core.after(PLATFORM_PASS_TIME, function()
+	c.after(PLATFORM_PASS_TIME, function()
 		for _, under in ipairs(swapped) do
-			if core.get_node(under).name == "grandchaos:trunk_platform_ghost" then
-				core.set_node(under, {name = "grandchaos:trunk_platform", param2 = 12})
+			if c.get_node(under).name == "grandchaos:trunk_platform_ghost" then
+				c.set_node(under, {name = "grandchaos:trunk_platform", param2 = 12})
 			end
 		end
 		local d2 = players_data[pname]
@@ -614,18 +623,18 @@ local function try_jump_through_platform(player, data, jump_pressed)
 	local swapped = {}
 	for dx = -1, 1 do
 		local above = {x = base_x + dx, y = above_y, z = data.origin.z}
-		if core.get_node(above).name == "grandchaos:trunk_platform" then
-			core.set_node(above, {name = "grandchaos:trunk_platform_ghost", param2 = 12})
+		if c.get_node(above).name == "grandchaos:trunk_platform" then
+			c.set_node(above, {name = "grandchaos:trunk_platform_ghost", param2 = 12})
 			table.insert(swapped, above)
 		end
 	end
 	if #swapped == 0 then return end
 	data.jumping_through = true
 	local pname = player:get_player_name()
-	core.after(JUMP_PASS_TIME, function()
+	c.after(JUMP_PASS_TIME, function()
 		for _, above in ipairs(swapped) do
-			if core.get_node(above).name == "grandchaos:trunk_platform_ghost" then
-				core.set_node(above, {name = "grandchaos:trunk_platform", param2 = 12})
+			if c.get_node(above).name == "grandchaos:trunk_platform_ghost" then
+				c.set_node(above, {name = "grandchaos:trunk_platform", param2 = 12})
 			end
 		end
 		local d2 = players_data[pname]
@@ -635,9 +644,9 @@ end
 
 local restore_arena
 -- Loop principal: trilho + checkpoints
-core.register_globalstep(function(dtime)
+c.register_globalstep(function(dtime)
 	for pname, data in pairs(players_data) do
-		local player = core.get_player_by_name(pname)
+		local player = c.get_player_by_name(pname)
 		if not player then
 			players_data[pname] = nil
 		elseif phase_active(data) then
@@ -659,8 +668,8 @@ core.register_globalstep(function(dtime)
 				local state = cleared and "go" or "wait"
 				if data.checkpoint_state ~= state then
 					data.checkpoint_state = state
-					if cleared then core.chat_send_player(pname, "Agache para prosseguir")
-					else core.chat_send_player(pname, "Derrote todos os inimigos deste trecho para o bloco acender!")
+					if cleared then c.chat_send_player(pname, S("Sneak to continue"))
+					else c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
 					end
 				end
 				if cleared and sneak_edge then
@@ -687,7 +696,7 @@ core.register_globalstep(function(dtime)
 						-- manda o jogador de volta ao spawn, em vez de só
 						-- deixá-lo parado fora dos trechos.
 						data.finished = true
-						local spawn = core.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+						local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
 						restore_arena(data)
 						players_data[pname] = nil
 						player:set_pos(spawn)
@@ -702,7 +711,7 @@ core.register_globalstep(function(dtime)
 						-- Fase concluída no último bloco luminoso (fim do trecho
 						-- do chefe): sai automaticamente do modo 2D.
 						if mt2d.user[pname] then mt2d.to_3dplayer(player) end
-						core.chat_send_player(pname, "Você concluiu a Fase 1 e saiu da fase.")
+						c.chat_send_player(pname, S("You completed Stage 1 and left the stage."))
 					end
 				end
 			else data.checkpoint_state = nil
@@ -711,11 +720,11 @@ core.register_globalstep(function(dtime)
 			if seg == 1 and reached_landing(player, data.origin, 1) then
 				if data.landing_state ~= "exit" then
 					data.landing_state = "exit"
-					core.chat_send_player(pname, "Agache para sair da fase e retornar ao início")
+					c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
 				end
 
 				if sneak_edge then
-					local spawn = core.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+					local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
 					-- Encerra a fase e restaura a área.
 					restore_arena(data)
 					players_data[pname] = nil
@@ -730,7 +739,7 @@ core.register_globalstep(function(dtime)
 						mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
 						mtplayer.cam:set_pos({x = pos.x, y = pos.y, z = pos.z + 5})
 					end
-					core.chat_send_player(pname, "Você saiu da fase.")
+					c.chat_send_player(pname, S("You left the stage."))
 				end
 			-- Bloco de POUSO do trecho atual: uma vez aceso (trecho limpo),
 			-- serve para voltar ao FIM do trecho anterior (não ao pouso
@@ -740,7 +749,7 @@ core.register_globalstep(function(dtime)
 				if cleared then
 					if data.landing_state ~= "go" then
 						data.landing_state = "go"
-						core.chat_send_player(pname, "Agache para voltar ao trecho anterior")
+						c.chat_send_player(pname, S("Sneak to go back to the previous segment"))
 					end
 					if sneak_edge then
 						local prev_seg = seg - 1
@@ -773,13 +782,13 @@ function grandchaos.spawn_boss(player)
 	-- O chefe nasce na sua própria trilha (entre a parede e a trilha do
 	-- jogador/plataformas), não na mesma trilha do jogador.
 	local pos = {x = boss_x, y = origin.y + 1, z = origin.z + BOSS_RAIL_OFFSET}
-	data.boss = core.add_entity(pos, "grandchaos:boss")
+	data.boss = c.add_entity(pos, "grandchaos:boss")
 	local le = data.boss and data.boss:get_luaentity()
 	if le then
 		le.gc_owner = pname
 		le.gc_seg = TOTAL_SEGMENTS
 	end
-	core.chat_send_player(pname, "[Fase 1] O Golem Guardião apareceu! Este é o combate final da fase.")
+	c.chat_send_player(pname, S("[Stage 1] The Guardian Golem has appeared! This is the stage's final battle."))
 end
 
 function grandchaos.on_mob_death(self)
@@ -789,7 +798,7 @@ function grandchaos.on_mob_death(self)
 	data.mobs_remaining = math.max(0, (data.mobs_remaining or 1) - 1)
 	if data.mobs_remaining <= 0 and data.stage == self.gc_seg then
 		set_segment_lamps(data.origin, self.gc_seg, true)
-		core.chat_send_player(pname, "Todos os inimigos do trecho foram derrotados! O bloco luminoso acendeu.")
+		c.chat_send_player(pname, S("All enemies in the segment have been defeated! The lit block turned on."))
 	end
 end
 
@@ -806,9 +815,9 @@ function grandchaos.on_boss_death(self)
 	end
 	for pname, data in pairs(players_data) do
 		if data.stage == TOTAL_SEGMENTS and not data.finished then
-			local player = core.get_player_by_name(pname)
+			local player = c.get_player_by_name(pname)
 			if player then
-				core.chat_send_player(pname, "[Fase 1 Concluída!] Você derrotou o Golem Guardião da Floresta de Aria!")
+				c.chat_send_player(pname, S("[Stage 1 Complete!] You defeated the Guardian Golem of the Aria Forest!"))
 				--player:get_inventory():add_item("main", "grandchaos:trophy")
 			end
 		end
@@ -818,13 +827,13 @@ end
 -- Restauração do terreno original
 restore_arena = function(data)
 	if not data.saved_nodes then return end
-	for _, entry in pairs(data.saved_nodes) do core.set_node(entry.pos, entry.node) end
+	for _, entry in pairs(data.saved_nodes) do c.set_node(entry.pos, entry.node) end
 end
 
 function grandchaos.reset_phase(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
-	if not data then core.chat_send_player(pname, "Você não tem uma fase ativa para reiniciar.") return end
+	if not data then c.chat_send_player(pname, S("You don't have an active stage to restart.")) return end
 	if data.alive_mobs then
 		for _, obj in ipairs(data.alive_mobs) do if obj and obj:get_luaentity() then obj:remove() end end
 	end
@@ -832,7 +841,7 @@ function grandchaos.reset_phase(player)
 	player:set_physics_override({jump = 1})
 	restore_arena(data)
 	players_data[pname] = nil
-	core.chat_send_player(pname, "Fase 1 reiniciada. O terreno original foi restaurado.")
+	c.chat_send_player(pname, S("Stage 1 has been reset. The original terrain was restored."))
 end
 
 
@@ -881,7 +890,7 @@ function grandchaos.restart_phase(player)
 	player:set_hp(20)
 	player:set_physics_override({jump = 2})
 	teleport_to_landing(player, data.origin, 1)
-	core.chat_send_player(pname, "A Fase 1 foi reiniciada a partir do início.")
+	c.chat_send_player(pname, S("Stage 1 has been restarted from the beginning."))
 end
 
 -- Ao morrer, se houver uma fase em andamento: reinicia o estado da
@@ -895,7 +904,7 @@ end
 -- é preciso mover o jogador "de verdade" (player:set_pos) desde já, e
 -- só reposicionar/ajustar a entidade visual com precisão depois que o
 -- mt2d terminar de recriá-la.
-core.register_on_respawnplayer(function(player)
+c.register_on_respawnplayer(function(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
 	if not data or not phase_active(data) then return false end
@@ -910,13 +919,13 @@ core.register_on_respawnplayer(function(player)
 
 	-- Espera o mt2d recriar a entidade visual (ver comentário acima)
 	-- antes de fazer o ajuste fino de posição/câmera.
-	core.after(1.2, function()
-		local p = core.get_player_by_name(pname)
+	c.after(1.2, function()
+		local p = c.get_player_by_name(pname)
 		local data2 = players_data[pname]
 		if not p or not data2 then return end
 		p:set_hp(20)
 		teleport_to_landing(p, data2.origin, 1)
-		core.chat_send_player(pname, "Você morreu! A Fase 1 foi reiniciada a partir do início.")
+		c.chat_send_player(pname, S("You died! Stage 1 has been restarted from the beginning."))
 	end)
 
 	return true
@@ -931,7 +940,7 @@ end)
 -- fazendo o jogador cair. Aqui corrigimos os dois: movemos o jogador real
 -- de imediato para o trecho/estágio em que ele estava, e reajustamos a
 -- entidade visual/câmera depois que o mt2d terminar de recriá-la.
-core.register_on_joinplayer(function(player)
+c.register_on_joinplayer(function(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
 	if not data or not phase_active(data) then return end
@@ -942,19 +951,19 @@ core.register_on_joinplayer(function(player)
 	player:set_pos(pos)
 	player:set_physics_override({jump = 2})
 
-	core.after(1.2, function()
-		local p = core.get_player_by_name(pname)
+	c.after(1.2, function()
+		local p = c.get_player_by_name(pname)
 		local data2 = players_data[pname]
 		if not p or not data2 then return end
 		teleport_to_landing(p, data2.origin, data2.stage)
-		core.chat_send_player(pname, "Fase 1 retomada a partir do trecho " .. data2.stage .. ".")
+		c.chat_send_player(pname, S("Stage 1 resumed from segment @1.", data2.stage))
 	end)
 end)
 
 -- Mostra a HUD de instrução (topo central) para quem entra e ainda não
 -- tem uma fase em andamento — quem está no meio de uma fase já passou
 -- do estágio de "/join2d ou /gcstart", então não precisa ver a dica.
-core.register_on_joinplayer(function(player)
+c.register_on_joinplayer(function(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
 	if data and phase_active(data) then return end
@@ -974,20 +983,20 @@ end)
 -- polling abaixo em vez de seguir direto.
 function grandchaos.start_phase(player, ref_pos)
 	local pname = player:get_player_name()
-	if players_data[pname] then core.chat_send_player(pname, "Você já tem uma fase em andamento. Use /gcreset para reiniciar.") return end
+	if players_data[pname] then c.chat_send_player(pname, S("You already have a stage in progress. Use /gcreset to restart.")) return end
 
 	local function do_start_phase()
 		local mtplayer = mt2d.user[pname]
 		if not mtplayer or not mtplayer.object then
-			core.chat_send_player(pname, "O modo 2D ainda não foi inicializado.")
+			c.chat_send_player(pname, S("2D mode has not been initialized yet."))
 			return
 		end
 		local obj = mtplayer.object
 		local base = ref_pos or obj:get_pos()
 	local origin = vector.round({x = 0, y = 500, z = 0})
-	core.chat_send_player(pname, "[grandchaos] Bem-vindo à Floresta de Aria — Fase 1!")
+	c.chat_send_player(pname, S("[grandchaos] Welcome to the Aria Forest — Stage 1!"))
 	local half_w = math.floor(WIDTH / 2)
-	core.emerge_area(
+	c.emerge_area(
 	    {
 		x = origin.x - (WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3),
 		y = origin.y,
@@ -1045,44 +1054,44 @@ function grandchaos.start_phase(player, ref_pos)
 		tries = tries + 1
 		local mtplayer = mt2d.user[pname]
 		if mtplayer and mtplayer.object then do_start_phase()
-		elseif tries < 40 then  core.after(0.1, wait_for_2d) -- tenta por até ~4 segundos
-		else core.chat_send_player(pname, "Não foi possível ativar o modo 2D. Tente novamente com /gcstart.")
+		elseif tries < 40 then  c.after(0.1, wait_for_2d) -- tenta por até ~4 segundos
+		else c.chat_send_player(pname, S("Could not activate 2D mode. Try again with /gcstart."))
 		end
 	end
-	core.after(0.1, wait_for_2d)
+	c.after(0.1, wait_for_2d)
 end
 
 
 -- Comandos de chat
-core.register_chatcommand("gcstart", {
-	description = "Inicia a Fase 1 do grandchaos (Floresta de Aria)",
+c.register_chatcommand("gcstart", {
+	description = S("Starts grandchaos Stage 1 (Aria Forest)"),
 	func = function(name)
-  		local player = core.get_player_by_name(name)
-  		if not player then return false, "Jogador não encontrado." end
+  		local player = c.get_player_by_name(name)
+  		if not player then return false, S("Player not found.") end
   		grandchaos.hide_hint(name)
    		grandchaos.start_phase(player)
    		return true
 	end,
 })
 
-core.register_chatcommand("gcreset", {
-	description = "Cancela e restaura o terreno da Fase 1 do grandchaos",
+c.register_chatcommand("gcreset", {
+	description = S("Cancels and restores the terrain of grandchaos Stage 1"),
 	func = function(name)
-  	        local player = core.get_player_by_name(name)
-		if not player then return false, "Jogador não encontrado." end
+  	        local player = c.get_player_by_name(name)
+		if not player then return false, S("Player not found.") end
 		grandchaos.reset_phase(player)
 		return true
 	end,
 })
 
-core.register_chatcommand("gcportal", {
-	description = "Recebe um Portal da Floresta de Aria para iniciar a Fase 1 ao usá-lo",
+c.register_chatcommand("gcportal", {
+	description = S("Gives an Aria Forest Portal that starts Stage 1 when used"),
 	func = function(name)
-		local player = core.get_player_by_name(name)
-		if not player then return false, "Jogador não encontrado." end
+		local player = c.get_player_by_name(name)
+		if not player then return false, S("Player not found.") end
 		player:get_inventory():add_item("main", "grandchaos:portal")
-		return true, "Você recebeu um Portal da Floresta de Aria. Coloque-o e clique com o botão direito para começar."
+		return true, S("You received an Aria Forest Portal. Place it and right-click to begin.")
 	end,
 })
 
-core.log("action", "[grandchaos] mod carregado")
+c.log("action", "[grandchaos] mod carregado")

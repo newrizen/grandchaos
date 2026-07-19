@@ -1,8 +1,14 @@
 -- grandchaos/items.lua
 -- Itens e nós usados na fase: espada do herói, barreira mágica, portal e troféu.
+-- NOTA DE TRADUÇÃO: as descrições de itens (description = ...) estão em
+-- inglês no código-fonte e passam pelo tradutor (S), assim como as
+-- mensagens de init.lua e mt2d.lua. A tradução pt-BR fica em
+-- locale/grandchaos.pt.tr.
+local S = core.get_translator("grandchaos")
+
 -- Espada do herói (arma inicial da fase)
 core.register_tool("grandchaos:sword", {
-	description = "Shinai\nEspada de Bambu\n[Nível Treinamento I]\nArma inicial",
+	description = S("Shinai") .. "\n" .. S("Bamboo Sword") .. "\n" .. S("[Training Level I]") .. "\n" .. S("Starting weapon"),
 	inventory_image = "gc_shinaisword.png",
 	tool_capabilities = {
 		full_punch_interval = 0.6,
@@ -15,7 +21,7 @@ core.register_tool("grandchaos:sword", {
 })
 -- Espada de conclusão da fase
 core.register_tool("grandchaos:sword2", {
-	description = "Bokken\nEspada de Madeira\n[Nível Treinamento II]",
+	description = S("Bokken") .. "\n" .. S("Wooden Sword") .. "\n" .. S("[Training Level II]"),
 	inventory_image = "gc_bokkensword.png",
 	stack_max = 1,
 	tool_capabilities = {
@@ -31,7 +37,7 @@ core.register_tool("grandchaos:sword2", {
 -- alcançar o bloco luminoso no chão do trecho. Usa a textura de tronco do
 -- jogo base (default:tree), mas é indestrutível para o jogador.
 core.register_node("grandchaos:trunk_wall", {
-	description = "Tronco da Parede (Barreira da Fase)",
+	description = S("Wall Trunk (Stage Barrier)"),
 	tiles = {"default_tree.png"},
 	paramtype2 = "facedir",
 	is_ground_content = false,
@@ -42,7 +48,7 @@ core.register_node("grandchaos:trunk_wall", {
 	groups = {not_in_creative_inventory = 1, immortal = 1},
 })
 core.register_node("grandchaos:trunk_platform", {
-	description = "Tronco Flutuante (Paltaforma da Fase)",
+	description = S("Floating Trunk (Stage Platform)"),
 	tiles = {"default_tree_top.png", "default_tree_top.png", "default_tree.png"},
 	collision_box = {type = "fixed", fixed = {-0.5, -0.5, -0.5, -0.3, 0.5, 0.5}},
 	paramtype2 = "facedir",
@@ -62,7 +68,7 @@ core.register_node("grandchaos:trunk_platform", {
 -- aparece no inventário — é sempre trocada de volta para o tronco sólido
 -- logo em seguida.
 core.register_node("grandchaos:trunk_platform_ghost", {
-	description = "Tronco Flutuante (passável)",
+	description = S("Floating Trunk (passable)"),
 	tiles = {"default_tree_top.png", "default_tree_top.png", "default_tree.png"},
 	collision_box = {type = "fixed", fixed = {-0.5, -0.5, -0.5, -0.3, 0.5, 0.5}},
 	paramtype2 = "facedir",
@@ -83,7 +89,7 @@ core.register_node("grandchaos:trunk_platform_ghost", {
 -- através da plataforma) com o mesmo mecanismo, no mesmo arquivo.
 
 core.register_node("grandchaos:floor1", {
-	description = "Chão de grama (piso da Fase)",
+	description = S("Grass Floor (Stage Ground)"),
 	tiles = {"default_grass.png", "default_dirt.png", "default_dirt.png^default_grass_side.png"},
 	paramtype2 = "facedir",
 	is_ground_content = false,
@@ -95,7 +101,7 @@ core.register_node("grandchaos:floor1", {
 	sounds = default.node_sound_dirt_defaults(),
 })
 core.register_node("grandchaos:floor2", {
-	description = "chão de terra (base da Fase)",
+	description = S("dirt floor (Stage Base)"),
 	tiles = {"default_dirt.png"},
 	paramtype2 = "facedir",
 	is_ground_content = false,
@@ -107,7 +113,7 @@ core.register_node("grandchaos:floor2", {
 })
 -- Portal de início / reinício da fase
 core.register_node("grandchaos:portal", {
-	description = "Portal da Floresta de Aria\nClique com o botão direito para iniciar a Fase 1",
+	description = S("Aria Forest Portal") .. "\n" .. S("Right-click to start Stage 1"),
 	drawtype = "nodebox",
 	tiles = {"grandchaos_portal.png"},
 	paramtype = "light",
@@ -120,32 +126,32 @@ core.register_node("grandchaos:portal", {
 	end,
 })
 core.register_craftitem("grandchaos:copper_coin", {
-	description = "Moeda de Cobre",
+	description = S("Copper Coin"),
 	inventory_image = "gc_coppercoin.png",
 	stack_max = 100,
 	light_source = 10,
 })
 core.register_craftitem("grandchaos:silver_coin", {
-	description = "Moeda de Prata",
+	description = S("Silver Coin"),
 	inventory_image = "gc_silvercoin.png",
 	stack_max = 100,
 	light_source = 10,
 })
 core.register_craftitem("grandchaos:gold_coin", {
-	description = "Moeda de Ouro",
+	description = S("Gold Coin"),
 	inventory_image = "gc_goldcoin.png",
 	stack_max = 100,
 	light_source = 10,
 })
 core.register_craftitem("grandchaos:platinum_coin", {
-	description = "Moeda de Platina",
+	description = S("Platinum Coin"),
 	inventory_image = "gc_platinumcoin.png",
 	stack_max = 100,
 	light_source = 10,
 })
 -- Troféu de conclusão da fase
 core.register_craftitem("grandchaos:trophy", {
-	description = "Troféu da Floresta de Aria\nPrêmio por concluir a Fase 1",
+	description = S("Aria Forest Trophy") .. "\n" .. S("Reward for completing Stage 1"),
 	inventory_image = "grandchaos_trophy.png",
 	stack_max = 1,
 	light_source = 10,

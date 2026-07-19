@@ -1,0 +1,117 @@
+# textdomain: grandchaos
+# Tradução pt-BR do mod grandchaos (Fase 1 - Floresta de Aria)
+# Os textos-fonte no código (init.lua) estão em inglês; este arquivo
+# devolve a experiência original em português para o cliente.
+# @n = quebra de linha, @= = sinal de igual literal, @@ = arroba literal.
+
+Type '/gcstart' to start the game ('/gcreset' cancels the stage)@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: in creative, use '/grantme leave2d' and '/leave2d')=Escreva '/gcstart' para iniciar o jogo ('/gcreset' elimina a fase)@nOu escreva '/join2d' para só testar o modo 2D [experimental]@n(voltar ao 3D: no criativo, use '/grantme leave2d' e '/leave2d')
+
+Sneak to continue=Agache para prosseguir
+
+Defeat all enemies in this segment for the block to light up!=Derrote todos os inimigos deste trecho para o bloco acender!
+
+You completed Stage 1 and left the stage.=Você concluiu a Fase 1 e saiu da fase.
+
+Sneak to leave the stage and return to the start=Agache para sair da fase e retornar ao início
+
+You left the stage.=Você saiu da fase.
+
+Sneak to go back to the previous segment=Agache para voltar ao trecho anterior
+
+[Stage 1] The Guardian Golem has appeared! This is the stage's final battle.=[Fase 1] O Golem Guardião apareceu! Este é o combate final da fase.
+
+All enemies in the segment have been defeated! The lit block turned on.=Todos os inimigos do trecho foram derrotados! O bloco luminoso acendeu.
+
+[Stage 1 Complete!] You defeated the Guardian Golem of the Aria Forest!=[Fase 1 Concluída!] Você derrotou o Golem Guardião da Floresta de Aria!
+
+You don't have an active stage to restart.=Você não tem uma fase ativa para reiniciar.
+
+Stage 1 has been reset. The original terrain was restored.=Fase 1 reiniciada. O terreno original foi restaurado.
+
+Stage 1 has been restarted from the beginning.=A Fase 1 foi reiniciada a partir do início.
+
+You died! Stage 1 has been restarted from the beginning.=Você morreu! A Fase 1 foi reiniciada a partir do início.
+
+Stage 1 resumed from segment @1.=Fase 1 retomada a partir do trecho @1.
+
+[grandchaos] Welcome to the Aria Forest — Stage 1!=[grandchaos] Bem-vindo à Floresta de Aria — Fase 1!
+
+You already have a stage in progress. Use /gcreset to restart.=Você já tem uma fase em andamento. Use /gcreset para reiniciar.
+
+2D mode has not been initialized yet.=O modo 2D ainda não foi inicializado.
+
+Could not activate 2D mode. Try again with /gcstart.=Não foi possível ativar o modo 2D. Tente novamente com /gcstart.
+
+Starts grandchaos Stage 1 (Aria Forest)=Inicia a Fase 1 do grandchaos (Floresta de Aria)
+
+Player not found.=Jogador não encontrado.
+
+Cancels and restores the terrain of grandchaos Stage 1=Cancela e restaura o terreno da Fase 1 do grandchaos
+
+Gives an Aria Forest Portal that starts Stage 1 when used=Recebe um Portal da Floresta de Aria para iniciar a Fase 1 ao usá-lo
+
+You received an Aria Forest Portal. Place it and right-click to begin.=Você recebeu um Portal da Floresta de Aria. Coloque-o e clique com o botão direito para começar.
+
+# --- mt2d.lua ---
+
+Leave Dimension=Sair da Dimensão
+
+You can't go home in 3D mode=Você não pode ir para casa no modo 3D
+
+Manually enter 2D mode=Entra manualmente no modo 2D
+
+You are already in 2D mode.=Você já está no modo 2D.
+
+You entered 2D mode.=Você entrou no modo 2D.
+
+Leaves 2D mode and returns to normal 3D mode=Sai do modo 2D e volta ao modo 3D normal
+
+You don't have the 'leave2d' privilege needed to use this command.=Você não tem o privilégio 'leave2d' necessário para usar este comando.
+
+You can't leave 2D mode during an active stage. Use /gcreset to cancel it first.=Você não pode sair do modo 2D durante uma fase em andamento. Use /gcreset para cancelá-la primeiro.
+
+You are already in 3D mode.=Você já está no modo 3D.
+
+You left 2D mode.=Você saiu do modo 2D.
+
+# --- items.lua ---
+
+Shinai=Shinai
+
+Bamboo Sword=Espada de Bambu
+
+[Training Level I]=[Nível Treinamento I]
+
+Starting weapon=Arma inicial
+
+Bokken=Bokken
+
+Wooden Sword=Espada de Madeira
+
+[Training Level II]=[Nível Treinamento II]
+
+Wall Trunk (Stage Barrier)=Tronco da Parede (Barreira da Fase)
+
+Floating Trunk (Stage Platform)=Tronco Flutuante (Paltaforma da Fase)
+
+Floating Trunk (passable)=Tronco Flutuante (passável)
+
+Grass Floor (Stage Ground)=Chão de grama (piso da Fase)
+
+dirt floor (Stage Base)=chão de terra (base da Fase)
+
+Aria Forest Portal=Portal da Floresta de Aria
+
+Right-click to start Stage 1=Clique com o botão direito para iniciar a Fase 1
+
+Copper Coin=Moeda de Cobre
+
+Silver Coin=Moeda de Prata
+
+Gold Coin=Moeda de Ouro
+
+Platinum Coin=Moeda de Platina
+
+Aria Forest Trophy=Troféu da Floresta de Aria
+
+Reward for completing Stage 1=Prêmio por concluir a Fase 1

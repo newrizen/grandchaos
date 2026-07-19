@@ -16,10 +16,15 @@ mt2d={
 	},
 }
 
+-- Mesmo textdomain do init.lua ("grandchaos"): os textos abaixo, já em
+-- inglês no código-fonte, são traduzidos de volta ao português por
+-- locale/grandchaos.pt.tr.
+local S = minetest.get_translator("grandchaos")
+
 dofile(minetest.get_modpath("grandchaos") .. "/mt2d_entities.lua")
 
 minetest.register_privilege("leave2d", {
-	description = "Leave Dimension",
+	description = S("Leave Dimension"),
 	give_to_singleplayer= false,
 })
 minetest.register_on_mods_loaded(function()
@@ -37,7 +42,7 @@ minetest.register_on_mods_loaded(function()
 			mt2d.user[name].cam:set_pos(pos)
 			return true
 		elseif not pos then return false
-		else minetest.chat_send_player(name,"You can't go home in 3D mode") return true end
+		else minetest.chat_send_player(name,S("You can't go home in 3D mode")) return true end
 	end
 	end
 end)
@@ -132,31 +137,31 @@ end)
 
 -- Comandos para entrar/sair do modo 2D manualmente.
 minetest.register_chatcommand("join2d", {
-	description = "Entra manualmente no modo 2D",
+	description = S("Manually enter 2D mode"),
 	func = function(name)
 		if grandchaos and grandchaos.hide_hint then grandchaos.hide_hint(name) end
 		local player = minetest.get_player_by_name(name)
-		if not player then return false, "Jogador não encontrado." end
-		if mt2d.user[name] then return false, "Você já está no modo 2D." end
+		if not player then return false, S("Player not found.") end
+		if mt2d.user[name] then return false, S("You are already in 2D mode.") end
 		mt2d.new_player(player)
-		return true, "Você entrou no modo 2D."
+		return true, S("You entered 2D mode.")
 	end,
 })
 
 minetest.register_chatcommand("leave2d", {
-	description = "Sai do modo 2D e volta ao modo 3D normal",
+	description = S("Leaves 2D mode and returns to normal 3D mode"),
 	func = function(name)
 		local player = minetest.get_player_by_name(name)
-		if not player then return false, "Jogador não encontrado." end
+		if not player then return false, S("Player not found.") end
 		if not minetest.check_player_privs(name, {leave2d = true}) then
-			return false, "Você não tem o privilégio 'leave2d' necessário para usar este comando."
+			return false, S("You don't have the 'leave2d' privilege needed to use this command.")
 		end
 		if grandchaos and grandchaos.is_phase_active and grandchaos.is_phase_active(name) then
-			return false, "Você não pode sair do modo 2D durante uma fase em andamento. Use /gcreset para cancelá-la primeiro."
+			return false, S("You can't leave 2D mode during an active stage. Use /gcreset to cancel it first.")
 		end
-		if not mt2d.user[name] then return false, "Você já está no modo 3D." end
+		if not mt2d.user[name] then return false, S("You are already in 3D mode.") end
 		mt2d.to_3dplayer(player)
-		return true, "Você saiu do modo 2D."
+		return true, S("You left 2D mode.")
 	end,
 })
 
