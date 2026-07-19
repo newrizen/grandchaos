@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <a href="READMEmd"><img src="https://img.shields.io/badge/🇺🇸-English-blue"></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/🇺🇸-English-blue"></a>
   <a href="README.pt.md"><img src="https://img.shields.io/badge/🇧🇷-Português-green"></a>
 </p>
 
