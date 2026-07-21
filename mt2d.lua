@@ -252,14 +252,10 @@ end
 
 
 mt2d.punch=function(ob1,ob2,hp)
-	if not (ob1 and ob2) then
-		return
-	end
+	if not (ob1 and ob2) then return end
 	hp=hp or 1
-	if ob1:is_player() then
-		ob1:set_hp(ob1:get_hp()-hp)
-	else
-		ob1:punch(ob2,1,{full_punch_interval=1,damage_groups={fleshy=hp}})
+	if ob1:is_player() then ob1:set_hp(ob1:get_hp()-hp)
+	else ob1:punch(ob2,1,{full_punch_interval=1,damage_groups={fleshy=hp}})
 	end	
 end
 
@@ -274,13 +270,9 @@ minetest.spawn_item=function(pos, item)
 				local yaw=math.floor(ob:get_yaw()*10)*0.1
 				local v={x=0,y=0,z=0}
 				local p=ob:get_pos()
-
-				if yaw==4.7 then
-					v.x=2
-				elseif yaw==1.5 then
-					v.x=-2
-				else
-					v.x=0
+				if yaw==4.7 then v.x=2
+				elseif yaw==1.5 then v.x=-2
+				else v.x=0
 				end
 
 				e:set_pos({x=pos.x+(v.x/2),y=pos.y-0.5,z=0})

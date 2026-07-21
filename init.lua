@@ -705,23 +705,43 @@ c.register_globalstep(function(dtime)
 						-- do trecho 1) já faz — restaura o terreno original e
 						-- manda o jogador de volta ao spawn, em vez de só
 						-- deixá-lo parado fora dos trechos.
-						data.finished = true
-						local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
-						restore_arena(data)
-						players_data[pname] = nil
-						player:set_pos(spawn)
-						player:set_physics_override({jump = 1})
-						local mtplayer = mt2d.user[pname]
-						if mtplayer and mtplayer.object then
-							local pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-							mtplayer.object:set_pos(pos)
-							mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-							mtplayer.cam:set_pos({x = pos.x, y = pos.y, z = pos.z + 5})
-						end
-						-- Fase concluída no último bloco luminoso (fim do trecho
-						-- do chefe): sai automaticamente do modo 2D.
-						if mt2d.user[pname] then mt2d.to_3dplayer(player) end
-						c.chat_send_player(pname, S("You completed Stage 1 and left the stage."))
+	data.finished = true
+
+	local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+	local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
+
+	-- Primeiro teleporta.
+	player:set_pos(spawn_pos)
+	player:set_physics_override({jump = 1})
+
+	local mtplayer = mt2d.user[pname]
+	if mtplayer and mtplayer.object then
+		mtplayer.object:set_pos(spawn_pos)
+		mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+		mtplayer.cam:set_pos({
+			x = spawn_pos.x,
+			y = spawn_pos.y,
+			z = spawn_pos.z + 5
+		})
+	end
+
+	-- Só depois remove a fase.
+	c.after(0.1, function()
+		local d = players_data[pname]
+		if d then
+			restore_arena(d)
+			players_data[pname] = nil
+		end
+
+		local p = c.get_player_by_name(pname)
+		if p and mt2d.user[pname] then
+			mt2d.to_3dplayer(p)
+		end
+
+		if p then
+			c.chat_send_player(pname, S("You completed Stage 1 and left the stage."))
+		end
+	end)
 					end
 				end
 			else data.checkpoint_state = nil
@@ -732,22 +752,21 @@ c.register_globalstep(function(dtime)
 					data.landing_state = "exit"
 					c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
 				end
-
 				if sneak_edge then
 					local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+					local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
 					-- Encerra a fase e restaura a área.
 					restore_arena(data)
 					players_data[pname] = nil
 					-- Move o jogador real.
-					player:set_pos(spawn)
+					player:set_pos(spawn_pos)
 					player:set_physics_override({jump = 1})
 					-- Move também a entidade 2D, se existir.
 					local mtplayer = mt2d.user[pname]
 					if mtplayer and mtplayer.object then
-						local pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-						mtplayer.object:set_pos(pos)
+						mtplayer.object:set_pos(spawn_pos)
 						mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-						mtplayer.cam:set_pos({x = pos.x, y = pos.y, z = pos.z + 5})
+						mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
 					end
 					c.chat_send_player(pname, S("You left the stage."))
 				end
@@ -768,8 +787,7 @@ c.register_globalstep(function(dtime)
 						data.landing_state = nil
 						teleport_to_end(player, data.origin, prev_seg)
 					end
-				else
-					if data.landing_state ~= "wait" then
+				else if data.landing_state ~= "wait" then
 						data.landing_state = "wait"
 						c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
 					end
@@ -802,7 +820,7 @@ function grandchaos.spawn_boss(player)
 		le.gc_owner = pname
 		le.gc_seg = TOTAL_SEGMENTS
 	end
-	c.chat_send_player(pname, S("[Stage 1] The Guardian Golem has appeared! This is the stage's final battle."))
+	c.chat_send_player(pname, S("[Stage 1] The Ent Guardian has appeared! This is the stage's final battle."))
 end
 
 function grandchaos.on_mob_death(self)
@@ -830,18 +848,29 @@ function grandchaos.on_boss_death(self)
 	for pname, data in pairs(players_data) do
 		if data.stage == TOTAL_SEGMENTS and not data.finished then
 			local player = c.get_player_by_name(pname)
-			if player then
-				c.chat_send_player(pname, S("[Stage 1 Complete!] You defeated the Guardian Golem of the Aria Forest!"))
-				--player:get_inventory():add_item("main", "grandchaos:trophy")
-			end
+			if player then c.chat_send_player(pname, S("[Stage 1 Complete!] You defeated the Ent Guardian of the Aria Forest!")) end
 		end
 	end
 end
 
 -- Restauração do terreno original
+-- A arena é sempre construída no mesmo ponto fixo (y=500), uma altura que
+-- normalmente nunca foi gerada pelo mapgen. Da primeira vez que a fase
+-- roda ali, get_node() para essas posições devolve "ignore" (chunk não
+-- carregado/gerado), e isso acaba sendo salvo em saved_nodes como o "nó
+-- original". O motor não deixa mais colocar "ignore" de volta no mapa
+-- (ver erro "Not allowing to place CONTENT_IGNORE" no debug.txt) — sem
+-- esse tratamento, o bloco sintético da fase (ex.: grandchaos:floor2,
+-- sólido e indestrutível) ficava permanentemente ali, e o jogador podia
+-- ficar preso/sufocando nesse lixo em partidas futuras. Nesses casos, o
+-- correto é restaurar para "air" em vez de tentar restaurar para "ignore".
 restore_arena = function(data)
 	if not data.saved_nodes then return end
-	for _, entry in pairs(data.saved_nodes) do c.set_node(entry.pos, entry.node) end
+	for _, entry in pairs(data.saved_nodes) do
+		local node = entry.node
+		if node.name == "ignore" then node = {name = "air"} end
+		c.set_node(entry.pos, node)
+	end
 end
 
 function grandchaos.reset_phase(player)

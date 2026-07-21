@@ -18,11 +18,11 @@ You left the stage.=Você saiu da fase.
 
 Sneak to go back to the previous segment=Agache para voltar ao trecho anterior
 
-[Stage 1] The Guardian Golem has appeared! This is the stage's final battle.=[Fase 1] O Golem Guardião apareceu! Este é o combate final da fase.
+[Stage 1] The Ent Guardian has appeared! This is the stage's final battle.=[Fase 1] O Ent Guardião apareceu! Este é o combate final da fase.
 
 All enemies in the segment have been defeated! The lit block turned on.=Todos os inimigos do trecho foram derrotados! O bloco luminoso acendeu.
 
-[Stage 1 Complete!] You defeated the Guardian Golem of the Aria Forest!=[Fase 1 Concluída!] Você derrotou o Golem Guardião da Floresta de Aria!
+[Stage 1 Complete!] You defeated the Ent Guardian of the Aria Forest!=[Fase 1 Concluída!] Você derrotou o Ent Guardião da Floresta de Aria!
 
 You don't have an active stage to restart.=Você não tem uma fase ativa para reiniciar.
 
@@ -68,48 +68,43 @@ Leaves 2D mode and returns to normal 3D mode=Sai do modo 2D e volta ao modo 3D n
 
 You don't have the 'leave2d' privilege needed to use this command.=Você não tem o privilégio 'leave2d' necessário para usar este comando.
 
-You can't leave 2D mode during an active stage. Use /gcreset to cancel it first.=Você não pode sair do modo 2D durante uma fase em andamento. Use /gcreset para cancelá-la primeiro.
+You can't leave 2D mode during an active stage. Use /gcreset to cancel it first.=Você não pode sair do modo 2D durante uma fase em andamento. Use /gcreset para a cancelar primeiro.
 
 You are already in 3D mode.=Você já está no modo 3D.
-
 You left 2D mode.=Você saiu do modo 2D.
 
 # --- items.lua ---
 
 Shinai=Shinai
-
 Bamboo Sword=Espada de Bambu
-
 [Training Level I]=[Nível Treinamento I]
-
 Starting weapon=Arma inicial
 
 Bokken=Bokken
-
 Wooden Sword=Espada de Madeira
-
 [Training Level II]=[Nível Treinamento II]
 
 Wall Trunk (Stage Barrier)=Tronco da Parede (Barreira da Fase)
 
 Floating Trunk (Stage Platform)=Tronco Flutuante (Paltaforma da Fase)
-
 Floating Trunk (passable)=Tronco Flutuante (passável)
 
 Grass Floor (Stage Ground)=Chão de grama (piso da Fase)
-
 dirt floor (Stage Base)=chão de terra (base da Fase)
+
+Glass Block=Bloco de Vidro
+Stage Teleporter [OFF]=Teleportador [DESLIGADO]
+
+Mese Lamp=Lâmpada Mese
+Stage Teleporter [ON]=Teleportador [LIGADO]
 
 Aria Forest Portal=Portal da Floresta de Aria
 
 Right-click to start Stage 1=Clique com o botão direito para iniciar a Fase 1
 
 Copper Coin=Moeda de Cobre
-
 Silver Coin=Moeda de Prata
-
 Gold Coin=Moeda de Ouro
-
 Platinum Coin=Moeda de Platina
 
 Aria Forest Trophy=Troféu da Floresta de Aria

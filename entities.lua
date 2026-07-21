@@ -1,7 +1,8 @@
--- grandchaos/entities.lua
+-- grandchaos/entities1.lua
 -- Entidades inimigas da Fase 1: Slime (básico), Arqueiro (à distância) e o chefe Ent.
 local c = core
 c.log("action", "[GrandChaos] entities.lua loaded")
+
 local function get_nearest_player(self, range)
 	local pos = self.object:get_pos()
 	local nearest, dist = nil, range
@@ -103,9 +104,7 @@ end
 -- Exibe um efeito de impacto temporário sobre o inimigo
 local function show_hit_effect(pos)
 	local effect = c.add_entity({x = pos.x, y = pos.y + 0.5, z = pos.z + 0.5}, "grandchaos:hit_effect")
-	if effect then
-		c.after(0.12, function() if effect and effect:get_luaentity() then effect:remove() end end)
-	end
+	if effect then c.after(0.12, function() if effect and effect:get_luaentity() then effect:remove() end end) end
 end
 
 c.register_entity("grandchaos:hit_effect", {
@@ -125,6 +124,57 @@ c.register_entity("grandchaos:hit_effect", {
 	end,
 })
 
+local function show_damage_number(pos, damage)
+    local str = tostring(damage)
+    -- distância horizontal entre os dígitos
+    local spacing = 0.15
+    local start = -((#str - 1) * spacing) / 2 -- centraliza o número
+    for i = 1, #str do
+        local digit = str:sub(i, i)
+        local obj = c.add_entity({x = pos.x + start - (i - 1) * spacing, y = pos.y + 1.2, z = pos.z}, "grandchaos:damage_number")
+        if obj then
+            local tex = "gc_" .. digit .. ".png"
+            if damage >= 5 and damage < 8 then tex = tex .. "^[multiply:#ff8000"
+            elseif damage >= 8 then tex = tex .. "^[multiply:#ff0000"
+            end
+            obj:set_properties({textures = {tex}})
+        end
+    end
+end
+
+c.register_entity("grandchaos:damage_number", {
+    initial_properties = {
+        physical = false,
+        collide_with_objects = false,
+        pointable = false,
+        visual = "sprite",
+        textures = {"gc_0.png"},
+        visual_size = {x = 0.2, y = 0.2},
+        glow = 14,
+        use_texture_alpha = true,
+        static_save = false,
+    },
+    damage = "0",
+    timer = 0,
+    on_activate = function(self)
+        self.object:set_armor_groups({immortal = 1})
+    end,
+    on_step = function(self, dtime)
+        self.timer = self.timer + dtime
+
+        local pos = self.object:get_pos()
+        pos.y = pos.y + dtime * 1.2
+        self.object:set_pos(pos)
+
+        if self.timer > 0.7 then
+            self.object:remove()
+            return
+        end
+    end,
+})
+
+
+
 -- SLIME: inimigo básico corpo a corpo, pouca vida, avança e ataca
 local use_alpha
 	if c.features and c.features.use_texture_alpha_string then use_alpha = "blend"
@@ -133,7 +183,7 @@ end
 
 c.register_entity("grandchaos:slime", {
 	initial_properties = {
-		hp_max = 18,
+		hp_max = 15,
 		physical = true,
 		collide_with_objects = true,
 		collisionbox = {-0.35, 0.0, -0.35, 0.35, 0.6, 0.35},
@@ -141,11 +191,12 @@ c.register_entity("grandchaos:slime", {
 		visual        = "mesh",
 		mesh          = "planslime.glb",
 		use_texture_alpha = use_alpha,
-		textures = {"planaria_slime2.png", "planaria_slime2.png"},
+		glow = 5,
+		textures = {"gc_slime.png", "gc_slime.png"},
 		makes_footstep_sound = false,
 	},
-	hp = 18,
-	max_hp = 18,
+	hp = 15,
+	max_hp = 15,
 	damage = 3,
 	speed = 1.6,
 	attack_range = 0.5,
@@ -195,8 +246,19 @@ c.register_entity("grandchaos:slime", {
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
+		local final_damage = damage or 1
+		if puncher and puncher:is_player() then
+			local pname = puncher:get_player_name()
+			local u = mt2d.user[pname]
+			local vel_ob = (u and u.object) or puncher
+			local vel = vel_ob:get_velocity()
+			local bonus = math.floor(math.abs(vel.x) / 4)
+			if math.abs(vel.y) > 0.01 then bonus = bonus + 1 end
+			final_damage = final_damage + bonus
+		end
 		show_hit_effect(self.object:get_pos())
-		self.hp = self.hp - (damage or 1)
+		show_damage_number(self.object:get_pos(), final_damage)
+		self.hp = self.hp - final_damage
 		if self.sounds and self.sounds.damage then
 			c.sound_play(self.sounds.damage, {object = self.object, max_hear_distance = 10}, true)
 		end
@@ -210,6 +272,7 @@ c.register_entity("grandchaos:slime", {
 			self.object:remove()
 			if grandchaos then grandchaos.on_mob_death(self) end
 		end
+		return true
 	end,
 	on_step = function(self, dtime)
 		self.attack_cooldown = math.max(0, self.attack_cooldown - dtime)
@@ -361,6 +424,7 @@ c.register_entity("grandchaos:archer", {
 		visual        = "mesh",
 		mesh          = "gc_mushiroomkid.glb",
 		use_texture_alpha = use_alpha,
+		glow = 2,
 		textures = {"gc_mushiroomkid.png", "gc_mushiroomkid.png"},
 		makes_footstep_sound = false,
 	},
@@ -413,8 +477,20 @@ c.register_entity("grandchaos:archer", {
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
-		if self.dead then return true end
+		local final_damage = damage or 1
+		if puncher and puncher:is_player() then
+			local pname = puncher:get_player_name()
+			local u = mt2d.user[pname]
+			local vel_ob = (u and u.object) or puncher
+			local vel = vel_ob:get_velocity()
+			local bonus = math.floor(math.abs(vel.x) / 4)
+			if math.abs(vel.y) > 0.01 then bonus = bonus + 1 end
+			final_damage = final_damage + bonus
+		end
 		show_hit_effect(self.object:get_pos())
+		show_damage_number(self.object:get_pos(), final_damage)
+		self.hp = self.hp - final_damage
+		if self.dead then return true end
 		c.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
 		-- recuo ao receber dano
 		if dir then
@@ -422,7 +498,6 @@ c.register_entity("grandchaos:archer", {
 			-- impede a IA de cancelar imediatamente o impulso
 			self.punch_timer = math.max(self.punch_timer, 0.25)
 		end
-		self.hp = self.hp - (damage or 1)
 		if self.hp <= 0 then
 			self.dead = true
 			c.sound_play(self.sounds.die, {pos = self.object:get_pos(), max_hear_distance = 12, gain = 1})
@@ -527,7 +602,7 @@ c.register_entity("grandchaos:boss", {
 		visual_size = {x = 1.8, y = 2.5},
 		mesh          = "gc_entboss.glb",
 		use_texture_alpha = use_alpha,
-		textures = {"gc_entboss2.png", "gc_entboss2.png"},
+		textures = {"gc_entboss.png", "gc_entboss.png"},
 		makes_footstep_sound = false,
 	},
 	hp = 160,
@@ -582,12 +657,23 @@ c.register_entity("grandchaos:boss", {
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
-		if self.dead then return true end
+		local final_damage = damage or 1
+		if puncher and puncher:is_player() then
+			local pname = puncher:get_player_name()
+			local u = mt2d.user[pname]
+			local vel_ob = (u and u.object) or puncher
+			local vel = vel_ob:get_velocity()
+			local bonus = math.floor(math.abs(vel.x) / 4)
+			if math.abs(vel.y) > 0.01 then bonus = bonus + 1 end
+			final_damage = final_damage + bonus
+		end
 		show_hit_effect(self.object:get_pos())
+		show_damage_number(self.object:get_pos(), final_damage)
+		self.hp = self.hp - final_damage
+		if self.dead then return true end
 		c.sound_play(self.sounds.damage, {pos = self.object:get_pos(), max_hear_distance = 12,gain = 1.0})
 		-- Recuo apenas em X e Y
 		if dir then self.object:set_velocity({x = dir.x * 2.0, y = math.max(0, dir.y) * 2.0 + 3.5, z = 0}) end
-		self.hp = self.hp - (damage or 1)
 		if grandchaos then grandchaos.on_boss_damaged(self) end
 			if self.hp <= 0 then
 				self.dead = true

@@ -28,7 +28,7 @@ core.register_tool("grandchaos:sword2", {
 		full_punch_interval = 0.7, -- Mais pesada ataca mais devagar
 		max_drop_level = 1,
 		groupcaps = {fleshy = {times = {[1] = 1.4, [2] = 0.7, [3] = 0.35}, uses = 0, maxlevel = 3}},
-		damage_groups = {fleshy = 10}, -- Maciça e maais pesada, o dobro de dano
+		damage_groups = {fleshy = 10}, -- Maciça e mais pesada, o dobro de dano
 	},
 	range = 1.5,
 	groups = {not_repaired_by_anvil = 1},
@@ -49,7 +49,9 @@ core.register_node("grandchaos:trunk_wall", {
 })
 core.register_node("grandchaos:trunk_platform", {
 	description = S("Floating Trunk (Stage Platform)"),
-	tiles = {"default_tree_top.png", "default_tree_top.png", "default_tree.png"},
+	drawtype = "mesh",
+	mesh = "hollowtrunk.obj",
+	tiles = {"hollowtrunk.png"},
 	collision_box = {type = "fixed", fixed = {-0.5, -0.5, -0.5, -0.3, 0.5, 0.5}},
 	paramtype2 = "facedir",
 	place_param2 = 12,
@@ -69,7 +71,9 @@ core.register_node("grandchaos:trunk_platform", {
 -- logo em seguida.
 core.register_node("grandchaos:trunk_platform_ghost", {
 	description = S("Floating Trunk (passable)"),
-	tiles = {"default_tree_top.png", "default_tree_top.png", "default_tree.png"},
+	drawtype = "mesh",
+	mesh = "hollowtrunk.obj",
+	tiles = {"hollowtrunk.png"},
 	collision_box = {type = "fixed", fixed = {-0.5, -0.5, -0.5, -0.3, 0.5, 0.5}},
 	paramtype2 = "facedir",
 	place_param2 = 12,
@@ -114,7 +118,7 @@ core.register_node("grandchaos:floor2", {
 -- Vidro indestrutível: mesma aparência e som do default:glass, mas
 -- indiquebrável, para uso na fase (paredes, janelas, etc.)
 core.register_node("grandchaos:glassblock", {
-	description = S("Glass") .. "\n" .. S("Stage Teleporter [OFF]"),
+	description = S("Glass Block") .. "\n" .. S("Stage Teleporter [OFF]"),
 	drawtype = "glasslike",
 	tiles = {"default_glass.png"},
 	paramtype = "light",
