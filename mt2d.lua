@@ -219,31 +219,22 @@ mt2d.pointable=function(p1,user)
 	local hit
 	for i=1,d,0.5 do
 		local node=minetest.get_node({x=p1.x+(v.x*i),y=p1.y+(v.y*i),z=p1.z+(v.z*i)})
-		if hit and minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].walkable then
-			return false
-		end
+		if hit and minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].walkable then return false end
 		hit=true
 	end
 	return true
 end
 
 mt2d.player_anim=function(self,typ)
-	if typ==self.anim then
-		return
-	end
+	if typ==self.anim then return end
 	self.anim=typ
 	self.ob:set_animation({x=mt2d.playeranim[typ].x, y=mt2d.playeranim[typ].y, },mt2d.playeranim[typ].speed,0)
-
 	if self.user and self.user:get_wielded_item()~=self.wielditem then
 		self.wielditem=self.user:get_wielded_item():get_name()
 		local t="mt2d_air.png"
-
 		local def1=minetest.registered_items[self.wielditem]
-
-		if def1 and def1.inventory_image and def1.inventory_image~="" then
-			t=def1.inventory_image
-		elseif def1 and def1.tiles and type(def1.tiles[1])=="string" then
-			t=def1.tiles[1]
+		if def1 and def1.inventory_image and def1.inventory_image~="" then t=def1.inventory_image
+		elseif def1 and def1.tiles and type(def1.tiles[1])=="string" then t=def1.tiles[1]
 		end
 		self.ob:set_properties({textures={mt2d.user[self.username].texture,t}})
 	end

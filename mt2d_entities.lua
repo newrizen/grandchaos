@@ -138,6 +138,7 @@ minetest.register_entity("grandchaos:cam",{
 		-- solta a trava do som de ataque assim que o jogador para de
 		-- segurar o botão, pra poder tocar de novo no próximo golpe
 		if not (key.RMB or key.LMB) then pob.punch_anim_played=false end
+		if not (pob.special_attack_timer and pob.special_attack_timer>0) then pob.special_attack_anim_played=false end
 		-- ao sair do stagger, devolve a gravidade normal ao jogador (durante
 		-- o stagger ela fica zerada pra ele ficar "deitado" no chão sem cair)
 		-- e restaura a colisão física (durante o stagger ele fica intangível
@@ -170,6 +171,15 @@ minetest.register_entity("grandchaos:cam",{
 				local frame_range,frame_speed,frame_blend=self.ob:get_animation()
 				if frame_range then self.ob:set_animation(frame_range,frame_speed,frame_blend,false) end
 			end
+		elseif pob.special_attack_timer and pob.special_attack_timer>0 then v.x=0
+		    if not pob.special_attack_anim_played then
+			pob.special_attack_anim_played=true
+			mt2d.player_anim(self,"mine")
+			-- toca uma vez só e congela no último frame (igual ao stagger/sneak),
+			-- em vez de reiniciar a animação a cada on_step
+			local frame_range,frame_speed,frame_blend=self.ob:get_animation()
+			if frame_range then self.ob:set_animation(frame_range,frame_speed,frame_blend,false) end
+		    end
 		elseif pob.recoil_timer and pob.recoil_timer>0 then
 			-- recuo leve: mantém o impulso do golpe (a gravidade cuida do
 			-- arco) e ignora o input de movimento/ataque por um instante
@@ -361,6 +371,7 @@ minetest.register_entity("grandchaos:player",{
 	on_step=function(self, dtime)
 		self.recoil_timer=math.max(0,(self.recoil_timer or 0)-dtime)
 		self.stagger_timer=math.max(0,(self.stagger_timer or 0)-dtime)
+		self.special_attack_timer=math.max(0,(self.special_attack_timer or 0)-dtime)
 		self.timer=self.timer+dtime
 		if self.start>0 then
 			self.start=self.start-dtime

@@ -82,6 +82,7 @@ end)
 
 dofile(c.get_modpath("grandchaos") .. "/items.lua")
 dofile(c.get_modpath("grandchaos") .. "/entities.lua")
+dofile(c.get_modpath("grandchaos") .. "/mpbar.lua")
 
 mt2d = {
     timer = 0,
