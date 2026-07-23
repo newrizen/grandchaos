@@ -610,6 +610,7 @@ c.register_entity("grandchaos:boss", {
 	damage = 4,
 	speed = 2,
 	attack_range = 1,
+	melee_vertical_range = 4, -- tolerância vertical (em nodes) do golpe corpo a corpo
 	attack_cooldown = 0,
 	slam_cooldown = 0,
 	is_boss = true,
@@ -657,6 +658,7 @@ c.register_entity("grandchaos:boss", {
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
+		c.chat_send_all("[DEBUG] boss on_punch chamado! damage="..tostring(damage))  -- REMOVER esta linha daqui
 		local final_damage = damage or 1
 		if puncher and puncher:is_player() then
 			local pname = puncher:get_player_name()
@@ -775,6 +777,8 @@ c.register_entity("grandchaos:boss", {
 		face_target(self, tpos)
 		local dx = rail_distance_x(pos, tpos)
 		local d = math.abs(dx)
+		local dy = rail_distance_y(pos, tpos)
+		local in_melee_range = d <= self.attack_range and dy <= self.melee_vertical_range -- evita bater em quem está pulando por cima
 		-- Processa a rajada de esporos (tem prioridade sobre movimento comum,
 		-- mas não bloqueia o boss como a sentada)
 		if self.spore_shots_left > 0 then
@@ -785,10 +789,15 @@ c.register_entity("grandchaos:boss", {
 				self.spore_shot_timer = self.spore_shot_gap
 			end
 		end
-		if d > self.attack_range then
+		if not in_melee_range then
 			local dir_x = dx > 0 and 1 or -1
-			self.object:set_velocity({x = dir_x * self.speed, y = self.object:get_velocity().y, z = 0})
-			if self.punch_timer <= 0 then self:set_anim("walk") end
+			if d > self.attack_range then
+				self.object:set_velocity({x = dir_x * self.speed, y = self.object:get_velocity().y, z = 0})
+				if self.punch_timer <= 0 then self:set_anim("walk") end
+			else
+				self.object:set_velocity({x = 0, y = self.object:get_velocity().y, z = 0})
+				if self.punch_timer <= 0 then self:set_anim("stand") end
+			end
 		else
 			self.object:set_velocity({x = 0, y = self.object:get_velocity().y, z = 0})
 			if self.attack_cooldown <= 0 then

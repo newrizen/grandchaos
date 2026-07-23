@@ -61,10 +61,10 @@ function grandchaos.show_hint(player)
 	local pname = player:get_player_name()
 	if hud_hint[pname] then return end
 	hud_hint[pname] = player:hud_add({
-		hud_elem_type = "text",
+		type = "text",
 		position = {x = 0.5, y = 0},
 		offset = {x = 0, y = 20},
-		alignment = {x = 0, y = 1},
+		alignment = {x = 0, y = 3},
 		number = 0xFFFFFF,
 		text = hint_text(),
 	})
@@ -81,8 +81,8 @@ c.register_on_leaveplayer(function(player)
 end)
 
 dofile(c.get_modpath("grandchaos") .. "/items.lua")
-dofile(c.get_modpath("grandchaos") .. "/entities.lua")
 dofile(c.get_modpath("grandchaos") .. "/mpbar.lua")
+dofile(c.get_modpath("grandchaos") .. "/entities.lua")
 
 mt2d = {
     timer = 0,
@@ -834,8 +834,6 @@ function grandchaos.on_mob_death(self)
 		c.chat_send_player(pname, S("All enemies in the segment have been defeated! The lit block turned on."))
 	end
 end
-
-function grandchaos.on_boss_damaged(self) end -- opcional: HUD de vida do chefe
 
 function grandchaos.on_boss_death(self)
 	local owner = self and self.gc_owner
