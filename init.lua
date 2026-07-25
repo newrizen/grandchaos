@@ -435,7 +435,7 @@ end
 
 local function build_vs_arena(origin)
 	local players = c.get_connected_players()
-	if #players ~= 2 then return false, "Exactly two players must be online." end
+	if #players ~= 2 then return false, S"Exactly two players must be online." end
 	local total_len = WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3
 	local vs_start = total_len + 100
 	local min_z = -math.floor(WIDTH / 2)
@@ -453,17 +453,11 @@ local function build_vs_arena(origin)
 	for x = vs_start + 1, vs_start + SEG_LEN - 1, 5 do
 		if low then
 			-- Plataforma baixa (3)
-			for dx = 0, 2 do
-				c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 3, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
-			end
+			for dx = 0, 2 do c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 3, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12}) end
 			-- Plataforma media (6)
-			for dx = 0, 2 do
-				c.set_node({x = origin.x - (x + dx) +2, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
-			end
+			for dx = 0, 2 do c.set_node({x = origin.x - (x + dx) +2, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12}) end
 			-- Plataforma alta (9), alinhada com a baixa
-			for dx = 0, 2 do
-				c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 9, z = origin.z}, { name = "grandchaos:trunk_platform", param2 = 12})
-			end
+			for dx = 0, 2 do c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 9, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12}) end
 		end
 		low = not low
 	end
@@ -474,9 +468,7 @@ local function build_vs_arena(origin)
 	-- mesmo jeito. Calculada a partir de WALL_THICKNESS para nunca
 	-- invadir a parede de fechamento (build_closing_wall logo abaixo).
 	local extra_mid_x = vs_start + SEG_LEN - WALL_THICKNESS - 1
-	for dx = 0, 2 do
-		c.set_node({x = origin.x - (extra_mid_x + dx) -3, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
-	end
+	for dx = 0, 2 do c.set_node({x = origin.x - (extra_mid_x + dx) -3, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12}) end
 	local left_spawn = {x = origin.x - (vs_start + 1), y = origin.y, z = origin.z}
 	local right_spawn = {x = origin.x - (vs_start + SEG_LEN - 1), y = origin.y, z = origin.z}
 	c.set_node(left_spawn, {name = "grandchaos:meselamp"})
@@ -505,9 +497,7 @@ local function build_vs_arena(origin)
 		for _, range in ipairs(hole_ranges) do
 			for x = range[1], range[2] do
 				for z = hole_z_start, hole_z_end do
-					for y = 1, -(HOLE_DEPTH - 1), -1 do
-						c.set_node({x = origin.x - x, y = origin.y + y, z = origin.z + z}, {name = "air"})
-					end
+					for y = 1, -(HOLE_DEPTH - 1), -1 do c.set_node({x = origin.x - x, y = origin.y + y, z = origin.z + z}, {name = "air"}) end
 				end
 			end
 		end
@@ -615,11 +605,7 @@ local function spawn_wave(player, seg)
 		-- 50% de chance de nascer sobre uma plataforma
 		if #platform_x > 0 and math.random() < 0.5 then
 			local i = math.random(#platform_x)
-			pos = {
-				x = origin.x - (platform_x[i] + 1),
-				y = origin.y + platform_heights[i] + 1,
-				z = origin.z,
-			}
+			pos = {x = origin.x - (platform_x[i] + 1), y = origin.y + platform_heights[i] + 1, z = origin.z}
 		else pos = {x = math.random(xmin, xmax), y = origin.y + 1, z = origin.z}
 		end
 		local obj = c.add_entity(pos, mob_name)
@@ -824,8 +810,7 @@ local restore_arena
 c.register_globalstep(function(dtime)
 	for pname, data in pairs(players_data) do
 		local player = c.get_player_by_name(pname)
-		if not player then
-			players_data[pname] = nil
+		if not player then players_data[pname] = nil
 		elseif phase_active(data) then
 			apply_rail_movement(player, data)
 			-- Detecta a "borda de subida" do agachar (passou de solto para
@@ -838,7 +823,6 @@ c.register_globalstep(function(dtime)
 			data.was_sneaking = sneak_now
 			try_drop_through_platform(player, data, sneak_now or (ctrl and ctrl.down))
 			try_jump_through_platform(player, data, ctrl and (ctrl.jump or ctrl.up))
-
 			-- Modo Versus: morre ao cair em um dos buracos-armadilha.
 			-- Fora dos buracos o chão é sólido em toda a arena (o jogador
 			-- nunca fica abaixo do nível do chão), então basta detectar
@@ -861,134 +845,118 @@ c.register_globalstep(function(dtime)
 					player:set_hp(0)
 				end
 			end
-
 			-- Modo Versus: só precisa de trilho + travessia de plataformas
 			-- (acima). Não há trechos/checkpoints/chefe no Versus, então
 			-- pula todo o restante, que é exclusivo da fase 1 solo.
 			if not data.vs then
-
-			local seg = data.stage
-			if reached_checkpoint(player, data.origin, seg) then
-				local cleared = stage_cleared(data)
-				local state = cleared and "go" or "wait"
-				if data.checkpoint_state ~= state then
-					data.checkpoint_state = state
-					if cleared then c.chat_send_player(pname, S("Sneak to continue"))
-					else c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
-					end
-				end
-				if cleared and sneak_edge then
-					if seg < TOTAL_SEGMENTS then
-						local next_seg = seg + 1
-						data.stage = next_seg
-						data.checkpoint_state = nil
-						data.landing_state = nil
-						teleport_to_landing(player, data.origin, next_seg)
-						-- Só gera a onda/chefe na primeira vez que o trecho é
-						-- visitado; se o jogador já tinha limpado esse trecho
-						-- antes (voltou e está indo para frente de novo), os
-						-- blocos já estão acesos e nada precisa ser refeito.
-						if not data.segment_started[next_seg] then
-							data.segment_started[next_seg] = true
-							if next_seg <= NUM_WAVE_SEGMENTS then spawn_wave(player, next_seg)
-							elseif next_seg == TOTAL_SEGMENTS then grandchaos.spawn_boss(player)
-							end
+				local seg = data.stage
+				if reached_checkpoint(player, data.origin, seg) then
+					local cleared = stage_cleared(data)
+					local state = cleared and "go" or "wait"
+					if data.checkpoint_state ~= state then
+						data.checkpoint_state = state
+						if cleared then c.chat_send_player(pname, S("Sneak to continue"))
+						else c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
 						end
-					else
-						-- Fim do trecho do chefe: encerra a fase por completo,
-						-- do mesmo jeito que o primeiro bloco luminoso (landing
-						-- do trecho 1) já faz — restaura o terreno original e
-						-- manda o jogador de volta ao spawn, em vez de só
-						-- deixá-lo parado fora dos trechos.
-	data.finished = true
-
-	local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
-	local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-
-	-- Primeiro teleporta.
-	player:set_pos(spawn_pos)
-	player:set_physics_override({jump = 1})
-
-	local mtplayer = mt2d.user[pname]
-	if mtplayer and mtplayer.object then
-		mtplayer.object:set_pos(spawn_pos)
-		mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-		mtplayer.cam:set_pos({
-			x = spawn_pos.x,
-			y = spawn_pos.y,
-			z = spawn_pos.z + 5
-		})
-	end
-
-	-- Só depois remove a fase.
-	c.after(0.1, function()
-		local d = players_data[pname]
-		if d then
-			restore_arena(d)
-			players_data[pname] = nil
-		end
-
-		local p = c.get_player_by_name(pname)
-		if p and mt2d.user[pname] then
-			mt2d.to_3dplayer(p)
-		end
-
-		if p then
-			c.chat_send_player(pname, S("You completed Stage 1 and left the stage."))
-		end
-	end)
 					end
-				end
-			else data.checkpoint_state = nil
-			end
-			-- Primeiro bloco luminoso da fase: sair da fase.
-			if seg == 1 and reached_landing(player, data.origin, 1) then
-				if data.landing_state ~= "exit" then
-					data.landing_state = "exit"
-					c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
-				end
-				if sneak_edge then
-					local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
-					local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-					-- Encerra a fase e restaura a área.
-					restore_arena(data)
-					players_data[pname] = nil
-					-- Move o jogador real.
-					player:set_pos(spawn_pos)
-					player:set_physics_override({jump = 1})
-					-- Move também a entidade 2D, se existir.
-					local mtplayer = mt2d.user[pname]
-					if mtplayer and mtplayer.object then
-						mtplayer.object:set_pos(spawn_pos)
-						mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-						mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
+					if cleared and sneak_edge then
+						if seg < TOTAL_SEGMENTS then
+							local next_seg = seg + 1
+							data.stage = next_seg
+							data.checkpoint_state = nil
+							data.landing_state = nil
+							teleport_to_landing(player, data.origin, next_seg)
+							-- Só gera a onda/chefe na primeira vez que o trecho é
+							-- visitado; se o jogador já tinha limpado esse trecho
+							-- antes (voltou e está indo para frente de novo), os
+							-- blocos já estão acesos e nada precisa ser refeito.
+							if not data.segment_started[next_seg] then
+								data.segment_started[next_seg] = true
+								if next_seg <= NUM_WAVE_SEGMENTS then spawn_wave(player, next_seg)
+								elseif next_seg == TOTAL_SEGMENTS then grandchaos.spawn_boss(player)
+								end
+							end
+						else
+							-- Fim do trecho do chefe: encerra a fase por completo,
+							-- do mesmo jeito que o primeiro bloco luminoso (landing
+							-- do trecho 1) já faz — restaura o terreno original e
+							-- manda o jogador de volta ao spawn, em vez de só
+							-- deixá-lo parado fora dos trechos.
+							data.finished = true
+							local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+							local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
+							-- Primeiro teleporta.
+							player:set_pos(spawn_pos)
+							player:set_physics_override({jump = 1})
+							local mtplayer = mt2d.user[pname]
+							if mtplayer and mtplayer.object then
+								mtplayer.object:set_pos(spawn_pos)
+								mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+								mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
+							end
+							-- Só depois remove a fase.
+							c.after(0.1, function()
+								local d = players_data[pname]
+								if d then
+									restore_arena(d)
+									players_data[pname] = nil
+								end
+								local p = c.get_player_by_name(pname)
+								if p and mt2d.user[pname] then mt2d.to_3dplayer(p) end
+								if p then c.chat_send_player(pname, S("You completed Stage 1 and left the stage.")) end
+							end)
+						end
 					end
-					c.chat_send_player(pname, S("You left the stage."))
+				else data.checkpoint_state = nil
 				end
-			-- Bloco de POUSO do trecho atual: uma vez aceso (trecho limpo),
-			-- serve para voltar ao FIM do trecho anterior (não ao pouso
-			-- dele, que fica longe, do outro lado do trecho anterior).
-			elseif seg > 1 and reached_landing(player, data.origin, seg) then
-				local cleared = stage_cleared(data)
-				if cleared then
-					if data.landing_state ~= "go" then
-						data.landing_state = "go"
-						c.chat_send_player(pname, S("Sneak to go back to the previous segment"))
+				-- Primeiro bloco luminoso da fase: sair da fase.
+				if seg == 1 and reached_landing(player, data.origin, 1) then
+					if data.landing_state ~= "exit" then
+						data.landing_state = "exit"
+						c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
 					end
 					if sneak_edge then
-						local prev_seg = seg - 1
-						data.stage = prev_seg
-						data.checkpoint_state = nil
-						data.landing_state = nil
-						teleport_to_end(player, data.origin, prev_seg)
+						local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+						local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
+						-- Encerra a fase e restaura a área.
+						restore_arena(data)
+						players_data[pname] = nil
+						-- Move o jogador real.
+						player:set_pos(spawn_pos)
+						player:set_physics_override({jump = 1})
+						-- Move também a entidade 2D, se existir.
+						local mtplayer = mt2d.user[pname]
+						if mtplayer and mtplayer.object then
+							mtplayer.object:set_pos(spawn_pos)
+							mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+							mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
+						end
+						c.chat_send_player(pname, S("You left the stage."))
 					end
-				else if data.landing_state ~= "wait" then
-						data.landing_state = "wait"
-						c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
+				-- Bloco de POUSO do trecho atual: uma vez aceso (trecho limpo),
+				-- serve para voltar ao FIM do trecho anterior (não ao pouso
+				-- dele, que fica longe, do outro lado do trecho anterior).
+				elseif seg > 1 and reached_landing(player, data.origin, seg) then
+					local cleared = stage_cleared(data)
+					if cleared then
+						if data.landing_state ~= "go" then
+							data.landing_state = "go"
+							c.chat_send_player(pname, S("Sneak to go back to the previous segment"))
+						end
+						if sneak_edge then
+							local prev_seg = seg - 1
+							data.stage = prev_seg
+							data.checkpoint_state = nil
+							data.landing_state = nil
+							teleport_to_end(player, data.origin, prev_seg)
+						end
+					else if data.landing_state ~= "wait" then
+							data.landing_state = "wait"
+							c.chat_send_player(pname, S("Defeat all enemies in this segment for the block to light up!"))
+						end
 					end
+				else data.landing_state = nil
 				end
-			else data.landing_state = nil
-			end
 			end -- fim de "if not data.vs then"
 		end
 	end
@@ -1071,9 +1039,7 @@ function grandchaos.reset_phase(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
 	if not data then c.chat_send_player(pname, S("You don't have an active stage to restart.")) return end
-	if data.alive_mobs then
-		for _, obj in ipairs(data.alive_mobs) do if obj and obj:get_luaentity() then obj:remove() end end
-	end
+	if data.alive_mobs then for _, obj in ipairs(data.alive_mobs) do if obj and obj:get_luaentity() then obj:remove() end end end
 	if data.boss and data.boss:get_luaentity() then data.boss:remove() end
 	player:set_physics_override({jump = 1})
 	restore_arena(data)
@@ -1096,9 +1062,7 @@ end
 -- não mexe em posição/HP do jogador. Pode ser chamado a qualquer
 -- momento, inclusive antes da entidade visual 2D existir de novo.
 local function reset_run_state(player, data)
-	if data.alive_mobs then
-		for _, obj in ipairs(data.alive_mobs) do if obj and obj:get_luaentity() then obj:remove() end end
-	end
+	if data.alive_mobs then for _, obj in ipairs(data.alive_mobs) do if obj and obj:get_luaentity() then obj:remove() end end end
 	if data.boss and data.boss:get_luaentity() then data.boss:remove() end
 	data.alive_mobs = {}
 	data.mobs_remaining = 0
@@ -1157,7 +1121,6 @@ c.register_on_respawnplayer(function(player)
 		player:set_pos(vs_spawn)
 		player:set_hp(20)
 		player:set_physics_override({jump = 2})
-
 		-- Acha o adversário (outro jogador com vs=true na mesma arena) e
 		-- o teleporta de volta ao próprio spawn dele também. Como esse
 		-- jogador não morreu de verdade, a entidade visual 2D dele
@@ -1264,7 +1227,6 @@ c.register_on_joinplayer(function(player)
 	local pos = {x = origin.x - landing_x(seg), y = origin.y + 1.5, z = origin.z}
 	player:set_pos(pos)
 	player:set_physics_override({jump = 2})
-
 	c.after(1.2, function()
 		local p = c.get_player_by_name(pname)
 		local data2 = players_data[pname]
@@ -1301,26 +1263,15 @@ function grandchaos.start_phase(player, ref_pos)
 
 	local function do_start_phase()
 		local mtplayer = mt2d.user[pname]
-		if not mtplayer or not mtplayer.object then
-			c.chat_send_player(pname, S("2D mode has not been initialized yet."))
-			return
-		end
+		if not mtplayer or not mtplayer.object then c.chat_send_player(pname, S("2D mode has not been initialized yet.")) return end
 		local obj = mtplayer.object
 		local base = ref_pos or obj:get_pos()
 	local origin = vector.round({x = 0, y = 500, z = 0})
 	c.chat_send_player(pname, S("[grandchaos] Welcome to the Aria Forest — Stage 1!"))
 	local half_w = math.floor(WIDTH / 2)
 	c.emerge_area(
-	    {
-		x = origin.x - (WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3),
-		y = origin.y,
-		z = origin.z - half_w
-	    },
-	    {
-		x = origin.x,
-		y = origin.y + HEIGHT + 2,
-		z = origin.z + half_w
-	    },
+	    {x = origin.x - (WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3), y = origin.y, z = origin.z - half_w},
+	    {x = origin.x, y = origin.y + HEIGHT + 2, z = origin.z + half_w},
 	    function(blockpos, action, remaining)
 		if remaining ~= 0 then return end
 		local saved_nodes, total_len = build_arena(origin)
@@ -1356,7 +1307,6 @@ function grandchaos.start_phase(player, ref_pos)
 	player:set_hp(20)
 	player:set_physics_override({jump = 2})
 	end -- fim de do_start_phase
-
 	-- Se o jogador já está em modo 2D (por ex. usou /join2d antes),
 	-- segue direto. Caso contrário, ativa o 2D agora e espera a
 	-- entidade visual (mtplayer.object) ser criada antes de continuar
@@ -1369,7 +1319,7 @@ function grandchaos.start_phase(player, ref_pos)
 		local mtplayer = mt2d.user[pname]
 		if mtplayer and mtplayer.object then do_start_phase()
 		elseif tries < 40 then  c.after(0.1, wait_for_2d) -- tenta por até ~4 segundos
-		else c.chat_send_player(pname, S("Could not activate 2D mode. Try again with /gcstart."))
+		else c.chat_send_player(pname, S("Could not activate 2D mode. Try again with: /gcstart"))
 		end
 	end
 	c.after(0.1, wait_for_2d)
@@ -1384,11 +1334,10 @@ end
 -- a arena Versus (build_vs_arena usa mt2d.user[...].object para posicionar
 -- os dois jogadores).
 c.register_chatcommand("gcvs", {
-	description = "Starts GrandChaos Versus mode",
+	description = S"Starts GrandChaos Versus Mode (PvP)",
 	func = function(name)
 		local players = c.get_connected_players()
-		if #players ~= 2 then return false, "Exactly two players must be online." end
-
+		if #players ~= 2 then return false, S"Exactly two players must be online." end
 		local function do_start_vs()
 			local origin = vector.round({x = 0, y = 500, z = 0})
 			-- Mesma lógica do /gcstart: só constrói a arena e posiciona os
@@ -1403,35 +1352,18 @@ c.register_chatcommand("gcvs", {
 			local vs_start = total_len + 100
 			local half_w = math.floor(WIDTH / 2)
 			c.emerge_area(
-				{
-					x = origin.x - (vs_start + SEG_LEN + WALL_THICKNESS + 3),
-					y = origin.y,
-					z = origin.z - half_w - 3
-				},
-				{
-					x = origin.x - (vs_start - WALL_THICKNESS - 3),
-					y = origin.y + HEIGHT + 2,
-					z = origin.z + half_w
-				},
+				{x = origin.x - (vs_start + SEG_LEN + WALL_THICKNESS + 3), y = origin.y, z = origin.z - half_w - 3},
+				{x = origin.x - (vs_start - WALL_THICKNESS - 3), y = origin.y + HEIGHT + 2, z = origin.z + half_w},
 				function(blockpos, action, remaining)
 					if remaining ~= 0 then return end
 					local ok, err = build_vs_arena(origin)
-					if not ok then
-						c.chat_send_player(name, err)
-						return
-					end
-					for _, p in ipairs(players) do
-						grandchaos.hide_hint(p:get_player_name())
-					end
-					c.chat_send_player(name, "GrandChaos Versus started!")
+					if not ok then c.chat_send_player(name, err) return end
+					for _, p in ipairs(players) do grandchaos.hide_hint(p:get_player_name()) end
+					c.chat_send_player(name, S"GrandChaos Versus started!")
 				end
 			)
 		end
-
-		for _, p in ipairs(players) do
-			if not mt2d.user[p:get_player_name()] then mt2d.new_player(p) end
-		end
-
+		for _, p in ipairs(players) do if not mt2d.user[p:get_player_name()] then mt2d.new_player(p) end end
 		local tries = 0
 		local function wait_for_2d()
 			tries = tries + 1
@@ -1440,12 +1372,9 @@ c.register_chatcommand("gcvs", {
 				local mtplayer = mt2d.user[p:get_player_name()]
 				if not (mtplayer and mtplayer.object) then ready = false end
 			end
-			if ready then
-				do_start_vs()
-			elseif tries < 40 then
-				c.after(0.1, wait_for_2d)
-			else
-				c.chat_send_player(name, "Could not activate 2D mode. Try again with /gcvs.")
+			if ready then do_start_vs()
+			elseif tries < 40 then c.after(0.1, wait_for_2d)
+			else c.chat_send_player(name, S"Could not activate 2D mode. Try again with: /gcvs")
 			end
 		end
 		wait_for_2d()

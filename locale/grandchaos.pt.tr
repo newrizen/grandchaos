@@ -40,7 +40,12 @@ You already have a stage in progress. Use /gcreset to restart.=Você já tem uma
 
 2D mode has not been initialized yet.=O modo 2D ainda não foi inicializado.
 
-Could not activate 2D mode. Try again with /gcstart.=Não foi possível ativar o modo 2D. Tente novamente com /gcstart.
+Could not activate 2D mode. Try again with: /gcstart=Não foi possível ativar o modo 2D. Tente novamente com: /gcstart
+
+Starts GrandChaos Versus Mode (PvP)=Inicia o Modo Versus (PvP) do GrandChaos
+Exactly two players must be online.=Exatamente dois players precisam estar online.
+GrandChaos Versus started!=GrandChaos Versus ativado!
+Could not activate 2D mode. Try again with: /gcvs=Não foi possivel ativar o Modo Versus. Tente de novo com: /gcvs
 
 Starts grandchaos Stage 1 (Aria Forest)=Inicia a Fase 1 do grandchaos (Floresta de Aria)
 
@@ -49,7 +54,6 @@ Player not found.=Jogador não encontrado.
 Cancels and restores the terrain of grandchaos Stage 1=Cancela e restaura o terreno da Fase 1 do grandchaos
 
 Gives an Aria Forest Portal that starts Stage 1 when used=Recebe um Portal da Floresta de Aria para iniciar a Fase 1 ao usá-lo
-
 You received an Aria Forest Portal. Place it and right-click to begin.=Você recebeu um Portal da Floresta de Aria. Coloque-o e clique com o botão direito para começar.
 
 # --- mt2d.lua ---
