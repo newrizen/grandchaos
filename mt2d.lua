@@ -131,7 +131,16 @@ end)
 minetest.register_on_respawnplayer(function(player)
 	local name=player:get_player_name()
 	if not (grandchaos and grandchaos.is_phase_active and grandchaos.is_phase_active(name)) then return end
-	minetest.after(0, function(player) local pos=player:get_pos() player:set_pos({x=pos.x,y=pos.y,z=5}) end,player)
+	-- Removido o antigo "minetest.after(0, ...)" que jogava o jogador para
+	-- z=5 logo após o respawn: essa faixa de z fica fora do chão que
+	-- build_corridor_shell constrói (só cobre z entre bg3_z e max_z, perto
+	-- de z=0), e como o jogador acabou de ser desanexado da câmera antiga
+	-- (register_on_dieplayer chama player:set_detach()), ele ficava caindo
+	-- livremente nesse vazio por ~1s até o mt2d.new_player abaixo resetar
+	-- o z de volta para 0 — daí a câmera parecer "cair do céu" a cada
+	-- morte. O grandchaos.register_on_respawnplayer (init.lua) já
+	-- reposiciona o jogador corretamente antes deste callback rodar, então
+	-- não há necessidade de mexer no z aqui.
 	minetest.after(1, function(player) mt2d.new_player(player) end,player)
 end)
 

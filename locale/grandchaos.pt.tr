@@ -4,7 +4,7 @@
 # devolve a experiência original em português para o cliente.
 # @n = quebra de linha, @= = sinal de igual literal, @@ = arroba literal.
 
-Type '/gcstart' to start the game ('/gcreset' cancels the stage)@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: in creative, use '/grantme leave2d' and '/leave2d')=Escreva '/gcstart' para iniciar o jogo ('/gcreset' elimina a fase)@nOu escreva '/join2d' para só testar o modo 2D [experimental]@n(voltar ao 3D: no criativo, use '/grantme leave2d' e '/leave2d')
+Type '/gcstart' to start the stage ('/gcreset' cancels),@nOr type '/gcvs' to start Versus Mode (PvP) [server],@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: creative -> '/grantme leave2d' -> '/leave2d')=Digite '/gcstart' para iniciar a fase ('/gcreset' cancela),@nOu digite '/gcvs' para iniciar o Modo Versus (PvP) [servidor],@nOu digite '/join2d' para apenas experimentar o modo 2D [experimental]@n(voltar para 3D: criativo -> '/grantme leave2d' -> '/leave2d')
 
 Sneak to continue=Agache para prosseguir
 
@@ -74,11 +74,14 @@ You are already in 3D mode.=Você já está no modo 3D.
 You left 2D mode.=Você saiu do modo 2D.
 
 # --- items.lua ---
+Stick=Graveto
+[Level 0]=[Nível 0]
+PvP Starting weapon=Arma Inicial de PvP
 
 Shinai=Shinai
 Bamboo Sword=Espada de Bambu
 [Training Level I]=[Nível Treinamento I]
-Starting weapon=Arma inicial
+Starting weapon=Arma Inicial
 
 Bokken=Bokken
 Wooden Sword=Espada de Madeira

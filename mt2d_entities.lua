@@ -382,7 +382,25 @@ minetest.register_entity("grandchaos:player",{
 		elseif self.user:get_hp()<=0 then
 			self.ob=self.object
 			self.ob:get_luaentity().dead=true
-			mt2d.player_anim(self,"lay")
+			-- Congela a queda no instante exato da morte: sem isso, a
+			-- gravidade continuava puxando a entidade para baixo (ela
+			-- morre em queda livre dentro do buraco-armadilha, no modo
+			-- Versus) enquanto espera o respawn/teleporte do grandchaos
+			-- (~1s depois), então a câmera parecia continuar caindo até
+			-- o fundo do buraco antes de ser corrigida.
+			self.object:set_velocity({x=0,y=0,z=0})
+			self.object:set_acceleration({x=0,y=0,z=0})
+			if self.anim~="lay" then
+				mt2d.player_anim(self,"lay")
+				-- mt2d.player_anim liga a animação com loop (igual faz para
+				-- "walk"/"stand"), mas a "lay" da morte de verdade (hp<=0)
+				-- não deve repetir -- mesmo padrão usado no stagger/sneak/mine
+				-- abaixo: força frame_loop=false para tocar uma vez e
+				-- congelar no último frame (jogador fica deitado parado em
+				-- vez de repetir a animação em loop enquanto espera o respawn)
+				local frame_range,frame_speed,frame_blend=self.ob:get_animation()
+				if frame_range then self.ob:set_animation(frame_range,frame_speed,frame_blend,false) end
+			end
 			-- toca o som de morte uma única vez (o ramo acima roda a
 			-- cada on_step enquanto o hp continuar <=0)
 			if not self.die_sound_played then

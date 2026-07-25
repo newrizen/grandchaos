@@ -54,7 +54,7 @@ local players_data = {}
 -- logo abaixo).
 local hud_hint = {}
 local function hint_text()
-	return S("Type '/gcstart' to start the game ('/gcreset' cancels the stage)@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: in creative, use '/grantme leave2d' and '/leave2d')")
+	return S("Type '/gcstart' to start the stage ('/gcreset' cancels),@nOr type '/gcvs' to start Versus Mode (PvP) [server],@nOr type '/join2d' to just try 2D mode [experimental]@n(back to 3D: creative -> '/grantme leave2d' -> '/leave2d')")
 end
 
 function grandchaos.show_hint(player)
@@ -130,8 +130,8 @@ function grandchaos.is_phase_active(pname) return phase_active(players_data[pnam
 -- Bloco luminoso de FIM de trecho: "apagado" enquanto houver inimigos vivos
 -- naquele trecho, e "aceso" (e só então libera a passagem) quando todos
 -- forem derrotados. O trecho 1 não tem inimigos, então já nasce aceso.
-local LAMP_ON = "default:meselamp"
-local LAMP_OFF = "default:glass"
+local LAMP_ON = "grandchaos:meselamp"
+local LAMP_OFF = "grandchaos:glassblock"
 
 local function end_lamp_pos(origin, seg) return {x = origin.x - end_marker_x(seg), y = origin.y, z = origin.z} end
 local function landing_lamp_pos(origin, seg) return {x = origin.x - landing_x(seg), y = origin.y, z = origin.z} end
@@ -153,13 +153,16 @@ end
 -- Um trecho está "limpo" quando não resta nenhum inimigo (contagem chega a 0)
 local function stage_cleared(data) return (data.mobs_remaining or 0) <= 0 end
 
--- Construção da arena (salva os nós originais para poder restaurar depois)
-local function build_arena(origin)
-	local saved = {}
-	-- WALL_THICKNESS (parede inicial) + TOTAL_SEGMENTS * SEG_SPAN (cada
-	-- trecho + a parede de 3 blocos que vem logo depois dele) + 3 de
-	-- folga fora dos trechos, no final (mesma folga de antes).
-	local total_len = WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3
+-- Constrói o "casco" do corredor — chão, paredes laterais decoradas com
+-- folhagem (z = min_z/max_z) e as camadas de vegetação de fundo — para um
+-- trecho de `length` blocos a partir de `x_offset` (coordenada relativa ao
+-- longo do eixo X, medida a partir de origin.x, com x crescente = mais
+-- longe de origin). Usado tanto pela arena principal (build_arena) quanto
+-- pela arena do modo Versus (build_vs_arena), para que ambas tenham o
+-- mesmo visual. Se `saved` for uma tabela, os nós originais substituídos
+-- são registrados nela (para permitir restaurar depois); passe nil quando
+-- a restauração não for necessária.
+local function build_corridor_shell(origin, x_offset, length, saved)
 	local min_z = -math.floor(WIDTH / 2)
 	local bg1_z = min_z - 1
 	local bg2_z = min_z - 2
@@ -167,13 +170,13 @@ local function build_arena(origin)
 	local max_z = min_z + WIDTH - 1
 	local wall_leaves = {}
 	local x = 0
-	while x <= total_len do
+	while x <= length do
 		-- Espaço maior entre conjuntos
 		x = x + math.random(2, 5)
-		if x <= total_len then
+		if x <= length then
 			-- Cada conjunto ocupa 2 ou 3 colunas
 			local width = math.random(2, 3)
-			for xx = x, math.min(x + width - 1, total_len) do
+			for xx = x, math.min(x + width - 1, length) do
 				-- Um pouco mais de folhas por conjunto
 				local clusters = math.random(2, 4)
 				for i = 1, clusters do
@@ -185,14 +188,16 @@ local function build_arena(origin)
 			x = x + width
 		end
 	end
-	for x = 0, total_len do
+	for x = 0, length do
 		for z = bg3_z, max_z do
 		local leaf_height = 0
 		if z == min_z and math.random(8) == 1 then leaf_height = math.random(1, 3) end
 			for y = -10, HEIGHT + 2 do
-				local p = {x = origin.x - x, y = origin.y + y, z = origin.z + z}
-				local key = c.hash_node_position(p)
-				saved[key] = {pos = p, node = c.get_node(p)}
+				local p = {x = origin.x - (x_offset + x), y = origin.y + y, z = origin.z + z}
+				if saved then
+					local key = c.hash_node_position(p)
+					saved[key] = {pos = p, node = c.get_node(p)}
+				end
 				if y == 0 then
 					if z == bg2_z then c.set_node(p, {name="grandchaos:floor1"})
 					elseif z == bg3_z then c.set_node(p, {name="grandchaos:floor2"})
@@ -229,21 +234,72 @@ local function build_arena(origin)
 			end
 		end
 	end
-	-- Parede logo ANTES do trecho 1 (fica atrás do jogador ao nascer),
-	-- agora com WALL_THICKNESS blocos de espessura.
-	for wx = 1, WALL_THICKNESS do
+end
+
+-- Constrói uma parede de troncos (permanente), com `thickness` blocos de
+-- espessura, ocupando toda a largura do corredor, começando em
+-- `x_offset` (coordenada relativa, mesmo referencial de
+-- build_corridor_shell). Usada para fechar as pontas da arena principal e
+-- as divisões entre os trechos.
+local function build_closing_wall(origin, x_offset, thickness)
+	local min_z = -math.floor(WIDTH / 2)
+	local max_z = min_z + WIDTH - 1
+	for wx = 1, thickness do
 		for z = min_z, max_z do
-			for y = 1, HEIGHT - 1 do c.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
+			for y = 1, HEIGHT - 1 do c.set_node({x = origin.x - (x_offset + wx), y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
 		end
 	end
+end
+
+-- Espalha vegetação decorativa (mato, arbustos secos, cogumelos) pelo chão
+-- de uma faixa do corredor (x_min..x_max, coordenadas relativas), evitando
+-- as posições já reservadas em `reserved` (ex.: lâmpadas).
+local function scatter_floor_decoration(origin, x_min, x_max, reserved)
+	local min_z = -math.floor(WIDTH / 2)
+	local max_z = min_z + WIDTH - 1
+	local function random_floor_pos()
+		for _ = 1, 100 do
+			local x = math.random(x_min, x_max)
+			local z = math.random(min_z + 1, max_z - 1)
+			local key = x .. ":" .. z
+			if not reserved[key] then reserved[key] = true return {x = origin.x - x, y = origin.y + 1, z = origin.z + z} end
+		end
+	end
+	-- 15 a 20 matos baixos
+	for i = 1, math.random(15, 20) do
+		local p = random_floor_pos()
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:grass_3"}) end
+	end
+	-- 10 a 15 arbustos secos
+	for i = 1, math.random(10, 15) do
+		local p = random_floor_pos()
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:dry_shrub"}) end
+	end
+	-- 5 a 7 cogumelos
+	for i = 1, math.random(5, 7) do
+		local p = random_floor_pos()
+		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "flowers:mushroom_red"}) end
+	end
+end
+
+-- Construção da arena (salva os nós originais para poder restaurar depois)
+local function build_arena(origin)
+	local saved = {}
+	-- WALL_THICKNESS (parede inicial) + TOTAL_SEGMENTS * SEG_SPAN (cada
+	-- trecho + a parede de 3 blocos que vem logo depois dele) + 3 de
+	-- folga fora dos trechos, no final (mesma folga de antes).
+	local total_len = WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3
+	local vs_start = total_len + 100
+	local min_z = -math.floor(WIDTH / 2)
+	local max_z = min_z + WIDTH - 1
+	build_corridor_shell(origin, 0, total_len, saved)
+	-- Parede logo ANTES do trecho 1 (fica atrás do jogador ao nascer),
+	-- agora com WALL_THICKNESS blocos de espessura.
+	build_closing_wall(origin, 0, WALL_THICKNESS)
 	-- Paredes ao final de cada trecho (inclui a que fecha o trecho do
 	-- chefe) — permanentes, nunca são removidas.
 	for seg = 1, TOTAL_SEGMENTS do
-		for wx = wall_x_start(seg), wall_x_end(seg) do
-			for z = min_z, max_z do
-				for y = 1, HEIGHT - 1 do c.set_node({x = origin.x - wx, y = origin.y + y, z = origin.z + z}, {name = "grandchaos:trunk_wall"}) end
-			end
-		end
+		build_closing_wall(origin, seg_x_end(seg), WALL_THICKNESS)
 		-- Bloco luminoso de FIM do trecho (LAMP_GAP blocos antes da
 		-- parede) — começa apagado; só acende quando todos os inimigos
 		-- do trecho forem derrotados (ver set_end_lamp, spawn_wave e
@@ -373,32 +429,142 @@ local function build_arena(origin)
 		used[end_marker_x(seg) .. ":0"] = true
 		used[landing_x(seg) .. ":0"] = true
 	end
-	local function random_floor_pos()
-		for _ = 1, 100 do
-			local x = math.random(landing_x(1), seg_x_end(TOTAL_SEGMENTS) - 2)
-			local z = math.random(min_z + 1, max_z - 1)
-			local key = x .. ":" .. z
-			if not used[key] then used[key] = true return {x = origin.x - x, y = origin.y + 1, z = origin.z + z} end
-		end
-	end
-	-- 15 a 20 matos baixos
-	for i = 1, math.random(15, 20) do
-		local p = random_floor_pos()
-		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:grass_3"}) end
-	end
-	-- 10 a 15 arbustos secos
-	for i = 1, math.random(10, 15) do
-		local p = random_floor_pos()
-		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "default:dry_shrub"}) end
-	end
-	-- 10 a 15 arbustos secos
-	for i = 1, math.random(5, 7) do
-		local p = random_floor_pos()
-		if p and c.get_node(p).name == "air" then c.set_node(p, {name = "flowers:mushroom_red"}) end
-	end
+	scatter_floor_decoration(origin, landing_x(1), seg_x_end(TOTAL_SEGMENTS) - 2, used)
 	return saved, total_len
 end
 
+local function build_vs_arena(origin)
+	local players = c.get_connected_players()
+	if #players ~= 2 then return false, "Exactly two players must be online." end
+	local total_len = WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3
+	local vs_start = total_len + 100
+	local min_z = -math.floor(WIDTH / 2)
+	local max_z = min_z + WIDTH - 1
+	-- Mesmo casco de build_arena (chão, paredes laterais com folhagem e
+	-- vegetação de fundo), sem as lâmpadas nem as plataformas do trecho —
+	-- essas a arena Versus monta com sua própria lógica, logo abaixo.
+	build_corridor_shell(origin, vs_start - WALL_THICKNESS, SEG_LEN + WALL_THICKNESS * 2)
+	build_closing_wall(origin, vs_start - WALL_THICKNESS - 1, WALL_THICKNESS)
+        build_closing_wall(origin, vs_start + SEG_LEN, WALL_THICKNESS)
+	-- Mesma decoração espalhada pelo chão (mato, arbustos secos, cogumelos).
+	scatter_floor_decoration(origin, vs_start + 2, vs_start + SEG_LEN - 2, {})
+	local low = true
+	local low = true
+	for x = vs_start + 1, vs_start + SEG_LEN - 1, 5 do
+		if low then
+			-- Plataforma baixa (3)
+			for dx = 0, 2 do
+				c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 3, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
+			end
+			-- Plataforma media (6)
+			for dx = 0, 2 do
+				c.set_node({x = origin.x - (x + dx) +2, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
+			end
+			-- Plataforma alta (9), alinhada com a baixa
+			for dx = 0, 2 do
+				c.set_node({x = origin.x - (x + dx) -3, y = origin.y + 9, z = origin.z}, { name = "grandchaos:trunk_platform", param2 = 12})
+			end
+		end
+		low = not low
+	end
+	-- Plataforma média extra: só na camada de altura 6, mais para o lado
+	-- do x negativo (mais perto do fim da arena), além do alcance das
+	-- camadas baixa/alta — mantendo o mesmo deslocamento (+2) usado nas
+	-- outras plataformas médias, para ficar centralizada/intercalada do
+	-- mesmo jeito. Calculada a partir de WALL_THICKNESS para nunca
+	-- invadir a parede de fechamento (build_closing_wall logo abaixo).
+	local extra_mid_x = vs_start + SEG_LEN - WALL_THICKNESS - 1
+	for dx = 0, 2 do
+		c.set_node({x = origin.x - (extra_mid_x + dx) -3, y = origin.y + 6, z = origin.z}, {name = "grandchaos:trunk_platform", param2 = 12})
+	end
+	local left_spawn = {x = origin.x - (vs_start + 1), y = origin.y, z = origin.z}
+	local right_spawn = {x = origin.x - (vs_start + SEG_LEN - 1), y = origin.y, z = origin.z}
+	c.set_node(left_spawn, {name = "grandchaos:meselamp"})
+	c.set_node(right_spawn, {name = "grandchaos:meselamp"})
+	-- Buracos-armadilha simétricos no chão, centralizados entre as duas
+	-- maselamps: 7 blocos de extensão em X, 3 em Z (incluindo a trilha
+	-- z = origin.z, por onde o jogador realmente anda — ver
+	-- apply_rail_movement) e 7 blocos de profundidade (cava o chão,
+	-- y relativo 0, e as 6 camadas de "grandchaos:floor2" logo abaixo).
+	-- Ficam espelhados um do outro, com 3 blocos de vão livre entre eles
+	-- no ponto médio exato entre as duas maselamps. Cair neles mata o
+	-- jogador (ver checagem de altura no register_globalstep, mais abaixo).
+	do
+		local HOLE_LEN = 5
+		local HOLE_DEPTH = 8
+		local HOLE_WIDTH_Z = 2
+		local HOLE_GAP = 15
+		local lamp_mid = math.floor(((vs_start + 1) + (vs_start + SEG_LEN - 1)) / 2)
+		local half_gap = math.floor(HOLE_GAP / 2)
+		local hole_z_start = min_z + 1
+		local hole_z_end = hole_z_start + HOLE_WIDTH_Z - 1
+		local hole_ranges = {
+			{lamp_mid - half_gap - HOLE_LEN, lamp_mid - half_gap - 1}, -- buraco à esquerda do centro
+			{lamp_mid + half_gap + 1, lamp_mid + half_gap + HOLE_LEN}, -- buraco à direita do centro (espelhado)
+		}
+		for _, range in ipairs(hole_ranges) do
+			for x = range[1], range[2] do
+				for z = hole_z_start, hole_z_end do
+					for y = 1, -(HOLE_DEPTH - 1), -1 do
+						c.set_node({x = origin.x - x, y = origin.y + y, z = origin.z + z}, {name = "air"})
+					end
+				end
+			end
+		end
+	end
+	local p1, p2 = players[1], players[2]
+	if math.random(2) == 2 then p1, p2 = p2, p1 end
+	local pos_left = {x = left_spawn.x, y = origin.y + 1.5, z = origin.z}
+	local pos_right = {x = right_spawn.x, y = origin.y + 1.5, z = origin.z}
+	p1:set_pos(pos_left)
+	p2:set_pos(pos_right)
+	local mt1 = mt2d.user[p1:get_player_name()]
+	local mt2 = mt2d.user[p2:get_player_name()]
+	if mt1 then
+		mt1.object:set_pos(pos_left)
+		mt1.object:set_velocity({x = 0, y = 0, z = 0})
+		mt1.cam:set_pos({x = pos_left.x, y = pos_left.y, z = pos_left.z + 5})
+	end
+	if mt2 then
+		mt2.object:set_pos(pos_right)
+		mt2.object:set_velocity({x = 0, y = 0, z = 0})
+		mt2.cam:set_pos({x = pos_right.x, y = pos_right.y, z = pos_right.z + 5})
+	end
+	-- Mesma preparação de jogador feita em grandchaos.start_phase/gcstart:
+	-- dar a "arma" stick (se ainda não tiver) e liberar o pulo maior.
+	for _, entry in ipairs({{p1, pos_left}, {p2, pos_right}}) do
+		local p, spawn_pos = entry[1], entry[2]
+		local inv = p:get_inventory()
+		if not inv:contains_item("main", "grandchaos:stick") then inv:add_item("main", "grandchaos:stick") end
+		p:set_hp(20)
+		p:set_physics_override({jump = 2})
+		-- Registro mínimo em players_data: sem isso, phase_active(data) fica
+		-- falso e o globalstep (apply_rail_movement, try_drop_through_platform,
+		-- try_jump_through_platform) nunca roda para esses jogadores — por
+		-- isso eles não conseguiam atravessar os troncos (grandchaos:trunk_platform)
+		-- no modo Versus. A flag `vs = true` faz o globalstep pular toda a
+		-- lógica de checkpoint/segmento da fase 1 solo (ver register_globalstep
+		-- logo abaixo), já que o Versus não tem trechos nem chefe.
+		-- `vs_spawn` guarda o próprio ponto de spawn do jogador (esquerda ou
+		-- direita), usado para reposicioná-lo ali se ele cair em um dos
+		-- buracos-armadilha e morrer (ver register_on_respawnplayer).
+		players_data[p:get_player_name()] = {
+			origin = origin,
+			stage = 1,
+			alive_mobs = {},
+			mobs_remaining = 0,
+			segment_started = {},
+			saved_nodes = nil,
+			finished = false,
+			checkpoint_state = nil,
+			landing_state = nil,
+			vs = true,
+			vs_spawn = spawn_pos,
+			vs_dead = false,
+		}
+	end
+	return true
+end
 
 -- Composição dos trechos de inimigos (o 1º fica vazio, só para caminhar)
 local WAVE_COMPOSITION = {
@@ -673,6 +839,34 @@ c.register_globalstep(function(dtime)
 			try_drop_through_platform(player, data, sneak_now or (ctrl and ctrl.down))
 			try_jump_through_platform(player, data, ctrl and (ctrl.jump or ctrl.up))
 
+			-- Modo Versus: morre ao cair em um dos buracos-armadilha.
+			-- Fora dos buracos o chão é sólido em toda a arena (o jogador
+			-- nunca fica abaixo do nível do chão), então basta detectar
+			-- que a entidade 2D caiu abaixo do plano do chão para saber
+			-- que ela está dentro de um buraco. `vs_dead` evita chamar
+			-- set_hp(0) em todo tick enquanto o jogador ainda está caindo.
+			-- O limiar era origin.y - 1: como a altura normal de jogo é
+			-- origin.y + 1.5, isso deixava o jogador cair uns 2.5 blocos
+			-- livremente dentro do buraco antes de sequer ser detectado
+			-- (dava tempo de pegar bastante velocidade de queda, o que
+			-- fazia a câmera parecer "cair bastante" mesmo já congelando
+			-- a entidade depois). Usando origin.y (bem próximo do topo do
+			-- chão, origin.y + 0.5), a queda é pega quase assim que o
+			-- jogador atravessa o buraco.
+			if data.vs and not data.vs_dead then
+				local mtplayer_vs = mt2d.user[pname]
+				local vs_pos = mtplayer_vs and mtplayer_vs.object and mtplayer_vs.object:get_pos()
+				if vs_pos and vs_pos.y < data.origin.y then
+					data.vs_dead = true
+					player:set_hp(0)
+				end
+			end
+
+			-- Modo Versus: só precisa de trilho + travessia de plataformas
+			-- (acima). Não há trechos/checkpoints/chefe no Versus, então
+			-- pula todo o restante, que é exclusivo da fase 1 solo.
+			if not data.vs then
+
 			local seg = data.stage
 			if reached_checkpoint(player, data.origin, seg) then
 				local cleared = stage_cleared(data)
@@ -795,6 +989,7 @@ c.register_globalstep(function(dtime)
 				end
 			else data.landing_state = nil
 			end
+			end -- fim de "if not data.vs then"
 		end
 	end
 end)
@@ -940,7 +1135,7 @@ end
 --
 -- IMPORTANTE: o mt2d (ver mt2d.lua) recria a câmera/entidade visual 2D
 -- (mt2d.user[pname].object) de forma ASSÍNCRONA, ~1s depois do respawn
--- (minetest.after(1, mt2d.new_player, player)), usando a posição REAL
+-- (core.after(1, mt2d.new_player, player)), usando a posição REAL
 -- do jogador (player:get_pos()) como base. Ou seja, não adianta mover
 -- a entidade visual antiga aqui (ela está fadada a ser descartada) —
 -- é preciso mover o jogador "de verdade" (player:set_pos) desde já, e
@@ -950,6 +1145,61 @@ c.register_on_respawnplayer(function(player)
 	local pname = player:get_player_name()
 	local data = players_data[pname]
 	if not data or not phase_active(data) then return false end
+
+	if data.vs then
+		-- Morte no modo Versus (ex.: caiu em um dos buracos-armadilha):
+		-- NÃO chama reset_run_state, pois essa função mexe em inimigos e
+		-- lâmpadas da fase 1 solo (que usa o mesmo `origin`, mas é uma
+		-- fase totalmente diferente) — aqui devolve os DOIS jogadores da
+		-- partida ao seu próprio ponto de spawn (maselamp) na arena
+		-- Versus, com vida cheia — não só quem morreu.
+		local vs_spawn = data.vs_spawn
+		player:set_pos(vs_spawn)
+		player:set_hp(20)
+		player:set_physics_override({jump = 2})
+
+		-- Acha o adversário (outro jogador com vs=true na mesma arena) e
+		-- o teleporta de volta ao próprio spawn dele também. Como esse
+		-- jogador não morreu de verdade, a entidade visual 2D dele
+		-- continua existindo (não é recriada pelo mt2d), então dá para
+		-- reposicionar tudo (jogador real, entidade e câmera) de imediato,
+		-- sem precisar do c.after(1.2, ...) usado abaixo para quem morreu.
+		for other_pname, other_data in pairs(players_data) do
+			if other_pname ~= pname and other_data.vs and other_data.origin == data.origin then
+				local other_player = c.get_player_by_name(other_pname)
+				if other_player then
+					local other_spawn = other_data.vs_spawn
+					other_player:set_pos(other_spawn)
+					other_player:set_hp(20)
+					other_player:set_physics_override({jump = 2})
+					other_data.vs_dead = false
+					local other_mt = mt2d.user[other_pname]
+					if other_mt and other_mt.object then
+						other_mt.object:set_pos(other_spawn)
+						other_mt.object:set_velocity({x = 0, y = 0, z = 0})
+						other_mt.cam:set_pos({x = other_spawn.x, y = other_spawn.y, z = other_spawn.z + 5})
+					end
+					c.chat_send_player(other_pname, S("Your opponent died! Back to your spawn."))
+				end
+			end
+		end
+
+		c.after(1.2, function()
+			local p = c.get_player_by_name(pname)
+			local data2 = players_data[pname]
+			if not p or not data2 then return end
+			p:set_hp(20)
+			data2.vs_dead = false
+			local mtplayer = mt2d.user[pname]
+			if mtplayer and mtplayer.object then
+				mtplayer.object:set_pos(data2.vs_spawn)
+				mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+				mtplayer.cam:set_pos({x = data2.vs_spawn.x, y = data2.vs_spawn.y, z = data2.vs_spawn.z + 5})
+			end
+			c.chat_send_player(pname, S("You fell into a pit! Back to your spawn."))
+		end)
+		return true
+	end
 
 	reset_run_state(player, data)
 
@@ -988,6 +1238,28 @@ c.register_on_joinplayer(function(player)
 	if not data or not phase_active(data) then return end
 
 	local origin = data.origin
+	if data.vs then
+		-- Reconexão durante o modo Versus: não há segmento/landing da fase
+		-- 1 solo aqui — volta o jogador ao seu próprio ponto de spawn na
+		-- arena Versus.
+		local pos = data.vs_spawn
+		player:set_pos(pos)
+		player:set_physics_override({jump = 2})
+		c.after(1.2, function()
+			local p = c.get_player_by_name(pname)
+			local data2 = players_data[pname]
+			if not p or not data2 then return end
+			p:set_pos(data2.vs_spawn)
+			local mtplayer = mt2d.user[pname]
+			if mtplayer and mtplayer.object then
+				mtplayer.object:set_pos(data2.vs_spawn)
+				mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+				mtplayer.cam:set_pos({x = data2.vs_spawn.x, y = data2.vs_spawn.y, z = data2.vs_spawn.z + 5})
+			end
+			c.chat_send_player(pname, S("Versus resumed."))
+		end)
+		return
+	end
 	local seg = data.stage
 	local pos = {x = origin.x - landing_x(seg), y = origin.y + 1.5, z = origin.z}
 	player:set_pos(pos)
@@ -1105,6 +1377,82 @@ end
 
 
 -- Comandos de chat
+-- IMPORTANTE: assim como em grandchaos.start_phase, mt2d.new_player() cria
+-- a entidade da câmera na hora, mas a entidade visual 2D (mtplayer.object)
+-- só é criada um tick de servidor depois. Por isso esperamos por polling
+-- até que AMBOS os jogadores tenham sua entidade 2D pronta antes de montar
+-- a arena Versus (build_vs_arena usa mt2d.user[...].object para posicionar
+-- os dois jogadores).
+c.register_chatcommand("gcvs", {
+	description = "Starts GrandChaos Versus mode",
+	func = function(name)
+		local players = c.get_connected_players()
+		if #players ~= 2 then return false, "Exactly two players must be online." end
+
+		local function do_start_vs()
+			local origin = vector.round({x = 0, y = 500, z = 0})
+			-- Mesma lógica do /gcstart: só constrói a arena e posiciona os
+			-- jogadores DEPOIS que o terreno da região estiver totalmente
+			-- carregado/gerado (remaining == 0). Sem isso, a arena Versus
+			-- fica ~100 blocos além do fim da fase 1 (vs_start = total_len
+			-- + 100), uma região que pode nunca ter sido carregada — os
+			-- set_node de build_vs_arena não colocam nada em mapblocks
+			-- não carregados, e os jogadores acabavam sendo teleportados
+			-- para o vazio, caindo do céu.
+			local total_len = WALL_THICKNESS + TOTAL_SEGMENTS * SEG_SPAN + 3
+			local vs_start = total_len + 100
+			local half_w = math.floor(WIDTH / 2)
+			c.emerge_area(
+				{
+					x = origin.x - (vs_start + SEG_LEN + WALL_THICKNESS + 3),
+					y = origin.y,
+					z = origin.z - half_w - 3
+				},
+				{
+					x = origin.x - (vs_start - WALL_THICKNESS - 3),
+					y = origin.y + HEIGHT + 2,
+					z = origin.z + half_w
+				},
+				function(blockpos, action, remaining)
+					if remaining ~= 0 then return end
+					local ok, err = build_vs_arena(origin)
+					if not ok then
+						c.chat_send_player(name, err)
+						return
+					end
+					for _, p in ipairs(players) do
+						grandchaos.hide_hint(p:get_player_name())
+					end
+					c.chat_send_player(name, "GrandChaos Versus started!")
+				end
+			)
+		end
+
+		for _, p in ipairs(players) do
+			if not mt2d.user[p:get_player_name()] then mt2d.new_player(p) end
+		end
+
+		local tries = 0
+		local function wait_for_2d()
+			tries = tries + 1
+			local ready = true
+			for _, p in ipairs(players) do
+				local mtplayer = mt2d.user[p:get_player_name()]
+				if not (mtplayer and mtplayer.object) then ready = false end
+			end
+			if ready then
+				do_start_vs()
+			elseif tries < 40 then
+				c.after(0.1, wait_for_2d)
+			else
+				c.chat_send_player(name, "Could not activate 2D mode. Try again with /gcvs.")
+			end
+		end
+		wait_for_2d()
+		return true
+	end
+})
+
 c.register_chatcommand("gcstart", {
 	description = S("Starts grandchaos Stage 1 (Aria Forest)"),
 	func = function(name)

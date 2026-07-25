@@ -6,6 +6,18 @@
 -- locale/grandchaos.pt.tr.
 local S = core.get_translator("grandchaos")
 
+core.register_tool("grandchaos:stick", {
+	description = S("Stick") .. "\n" .. S("[Level 0]") .. "\n" .. S("PvP Starting weapon"),
+	inventory_image = "default_stick.png",
+	tool_capabilities = {
+		full_punch_interval = 0.6,
+		max_drop_level = 1,
+		groupcaps = {fleshy = {times = {[1] = 1.2, [2] = 0.6, [3] = 0.3}, uses = 0, maxlevel = 3}},
+		damage_groups = {fleshy = 1},
+	},
+	range = 1,
+	groups = {not_repaired_by_anvil = 1},
+})
 -- Espada do herói (arma inicial da fase)
 core.register_tool("grandchaos:sword", {
 	description = S("Shinai") .. "\n" .. S("Bamboo Sword") .. "\n" .. S("[Training Level I]") .. "\n" .. S("Starting weapon"),
