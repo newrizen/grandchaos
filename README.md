@@ -15,7 +15,7 @@
   GrandChaos, a Minetest Game (Luanti) mod based on GrandChase
 
   <img 
-    src="https://github.com/newrizen/grandchaos/blob/main/images/screenshot_20260719_112754.png"
+    src="https://github.com/newrizen/grandchaos/blob/main/images/screenshot_20260725_205313.png"
     alt="GrandChaos Screenshot"
     width="350">
 </div>
