@@ -87,5 +87,5 @@ local NUM_WAVE_SEGMENTS = 4    -- wave sections (the 1st has no enemies)
  Health, damage and speed of each enemy are in entities.lua, in the initial_properties/fields tables of each core.register_entity.
 ## External Mod
 Modified mod used for this game:
-- Minetest 2D (mt2d) - 2D mod for Minetest Game [Game Page]([https://codeberg.org/tenplus1/mobs_redo.git](https://content.luanti.org/packages/AiTechEye/mt2d/))
+- Minetest 2D (mt2d) - 2D mod for Minetest Game [[Game Page]](https://content.luanti.org/packages/AiTechEye/mt2d/)
 </div>

@@ -87,5 +87,5 @@ local NUM_WAVE_SEGMENTS = 4    -- trechos de onda (o 1º fica vazio de inimig
  Vida, dano e velocidade de cada inimigo estão em entities.lua, nas tabelas initial_properties/campos de cada core.register_entity.
 ## External Mod
 Modified mod used to this game:
-- Minetest 2D (mt2d) - 2D mod for Minetest Game [Game Page]([https://codeberg.org/tenplus1/mobs_redo.git](https://content.luanti.org/packages/AiTechEye/mt2d/))
+- Minetest 2D (mt2d) - 2D mod for Minetest Game [[Game Page]](https://content.luanti.org/packages/AiTechEye/mt2d/)
 </div>
