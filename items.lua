@@ -26,7 +26,7 @@ core.register_tool("grandchaos:sword", {
 		full_punch_interval = 0.6,
 		max_drop_level = 1,
 		groupcaps = {fleshy = {times = {[1] = 1.2, [2] = 0.6, [3] = 0.3}, uses = 0, maxlevel = 3}},
-		damage_groups = {fleshy = 5},
+		damage_groups = {fleshy = 100},
 	},
 	range = 1,
 	groups = {not_repaired_by_anvil = 1},

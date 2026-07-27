@@ -806,6 +806,81 @@ local function try_jump_through_platform(player, data, jump_pressed)
 end
 
 local restore_arena
+-- Ponto de spawn configurado no servidor (ou fallback fixo). Não é
+-- necessariamente seguro: pode estar num chunk ainda não carregado, ou
+-- por coincidência do mapgen, dentro de terreno sólido.
+local function raw_spawn_pos()
+	return c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
+end
+-- Sobe (e, se preciso, desce) a partir de `pos` procurando um lugar onde
+-- o jogador realmente CABE E FICA EM PÉ: pés e cabeça livres, com um nó
+-- sólido logo abaixo servindo de chão (sem essa 3ª checagem, o primeiro
+-- "buraco de ar" encontrado podia estar flutuando bem acima do terreno,
+-- fazendo o jogador cair de queda livre até achar chão de verdade). Só é
+-- confiável DEPOIS que a coluna foi emergida (ver safe_teleport_to_spawn);
+-- antes disso, nós não carregados voltam como "ignore" (não-sólido), o
+-- que pareceria "seguro"/"livre" sem ainda ter sido gerado.
+local function find_air_pocket(pos, max_scan)
+	max_scan = max_scan or 30
+	local function passable(p)
+		local n = c.registered_nodes[c.get_node(p).name]
+		return n and not n.walkable
+	end
+	local function solid(p)
+		local n = c.registered_nodes[c.get_node(p).name]
+		return n and n.walkable
+	end
+	local function is_standable(feet)
+		local head = {x = feet.x, y = feet.y + 1, z = feet.z}
+		local floor = {x = feet.x, y = feet.y - 1, z = feet.z}
+		return passable(feet) and passable(head) and solid(floor)
+	end
+	for dy = 0, max_scan do
+		local feet = {x = pos.x, y = pos.y + dy, z = pos.z}
+		if is_standable(feet) then return feet end
+	end
+	for dy = 1, max_scan do
+		local feet = {x = pos.x, y = pos.y - dy, z = pos.z}
+		if is_standable(feet) then return feet end
+	end
+	-- Não achou nenhum trecho com chão sólido embaixo dentro do alcance:
+	-- pelo menos garante um bolsão de ar (pés+cabeça livres), sem exigir
+	-- piso, pra não ficar cravado dentro de pedra — mas isso ainda pode
+	-- cair de queda livre, então é só o último recurso mesmo.
+	for dy = 0, max_scan do
+		local feet = {x = pos.x, y = pos.y + dy, z = pos.z}
+		local head = {x = feet.x, y = feet.y + 1, z = feet.z}
+		if passable(feet) and passable(head) then return feet end
+	end
+	return {x = pos.x, y = pos.y + max_scan, z = pos.z}
+end
+-- Garante que a coluna em volta do spawn esteja carregada (emerge_area)
+-- antes de checar solidez, acha um lugar seguro perto dela e só então
+-- teleporta o jogador (real + entidade 2D). `after_teleport` roda depois
+-- do teleporte — é aí que cada chamador deve restaurar/limpar a arena.
+local function safe_teleport_to_spawn(player, pname, after_teleport)
+	local base = raw_spawn_pos()
+	c.emerge_area(
+		{x = base.x - 1, y = base.y - 30, z = base.z - 1},
+		{x = base.x + 1, y = base.y + 30, z = base.z + 1},
+		function(_, _, remaining)
+			if remaining ~= 0 then return end
+			local p = c.get_player_by_name(pname)
+			if not p then return end
+			local safe = find_air_pocket(base)
+			local spawn_pos = {x = safe.x, y = safe.y + 0.5, z = safe.z}
+			p:set_pos(spawn_pos)
+			p:set_physics_override({jump = 1})
+			local mtplayer = mt2d.user[pname]
+			if mtplayer and mtplayer.object then
+				mtplayer.object:set_pos(spawn_pos)
+				mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
+				mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
+			end
+			if after_teleport then after_teleport() end
+		end
+	)
+end
 -- Loop principal: trilho + checkpoints
 c.register_globalstep(function(dtime)
 	for pname, data in pairs(players_data) do
@@ -877,32 +952,19 @@ c.register_globalstep(function(dtime)
 								end
 							end
 						else
-							-- Fim do trecho do chefe: encerra a fase por completo,
-							-- do mesmo jeito que o primeiro bloco luminoso (landing
-							-- do trecho 1) já faz — restaura o terreno original e
-							-- manda o jogador de volta ao spawn, em vez de só
-							-- deixá-lo parado fora dos trechos.
+							-- Fim do trecho do chefe: encerra a fase por completo, igual ao
+							-- primeiro bloco luminoso (landing do trecho 1) — mas antes sai do
+							-- modo 2D, já que aqui (diferente do primeiro portal) o jogador
+							-- deve voltar ao movimento normal em 3D.
 							data.finished = true
-							local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
-							local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-							-- Primeiro teleporta.
-							player:set_pos(spawn_pos)
-							player:set_physics_override({jump = 1})
-							local mtplayer = mt2d.user[pname]
-							if mtplayer and mtplayer.object then
-								mtplayer.object:set_pos(spawn_pos)
-								mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-								mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
-							end
-							-- Só depois remove a fase.
-							c.after(0.1, function()
+							if mt2d.user[pname] then mt2d.to_3dplayer(player) end
+							safe_teleport_to_spawn(player, pname, function()
 								local d = players_data[pname]
 								if d then
 									restore_arena(d)
 									players_data[pname] = nil
 								end
 								local p = c.get_player_by_name(pname)
-								if p and mt2d.user[pname] then mt2d.to_3dplayer(p) end
 								if p then c.chat_send_player(pname, S("You completed Stage 1 and left the stage.")) end
 							end)
 						end
@@ -916,22 +978,15 @@ c.register_globalstep(function(dtime)
 						c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
 					end
 					if sneak_edge then
-						local spawn = c.setting_get_pos("static_spawnpoint") or {x = 0, y = 10, z = 0}
-						local spawn_pos = {x = spawn.x, y = spawn.y + 1.5, z = spawn.z}
-						-- Encerra a fase e restaura a área.
-						restore_arena(data)
-						players_data[pname] = nil
-						-- Move o jogador real.
-						player:set_pos(spawn_pos)
-						player:set_physics_override({jump = 1})
-						-- Move também a entidade 2D, se existir.
-						local mtplayer = mt2d.user[pname]
-						if mtplayer and mtplayer.object then
-							mtplayer.object:set_pos(spawn_pos)
-							mtplayer.object:set_velocity({x = 0, y = 0, z = 0})
-							mtplayer.cam:set_pos({x = spawn_pos.x, y = spawn_pos.y, z = spawn_pos.z + 5})
-						end
+						data.finished = true
 						c.chat_send_player(pname, S("You left the stage."))
+						safe_teleport_to_spawn(player, pname, function()
+							local d = players_data[pname]
+							if d then
+								restore_arena(d)
+								players_data[pname] = nil
+							end
+						end)
 					end
 				-- Bloco de POUSO do trecho atual: uma vez aceso (trecho limpo),
 				-- serve para voltar ao FIM do trecho anterior (não ao pouso

@@ -197,13 +197,8 @@ end
 -- chamado pelo entities.lua (on_punch do boss) a cada hit -- atualiza na hora,
 -- sem esperar o próximo tick de checagem de proximidade
 function grandchaos.on_boss_damaged(boss)
-    c.chat_send_all("on_boss_damaged!")
     local matched = 0
     for pname, tracked in pairs(player_boss) do
-        c.chat_send_all(tostring(tracked == boss) ..
-            " | tracked=" .. tostring(tracked) ..
-            " boss=" .. tostring(boss)
-        )
         if tracked == boss then
             matched = matched + 1
             local player = c.get_player_by_name(pname)
@@ -212,24 +207,13 @@ function grandchaos.on_boss_damaged(boss)
             end
         end
     end
-    c.chat_send_all("matched=" .. matched)
 end
 
 function grandchaos.update_boss_bar(player, boss)
     local name = player:get_player_name()
-
-    c.chat_send_player(name, "update: "..tostring(boss_hp_fraction(boss)))
-
     local ids = boss_hud[name]
-    if not ids then
-        c.chat_send_player(name, "[DEBUG] sem boss_hud")
-        return
-    end
-
     local frac = boss_hp_fraction(boss)
     player:hud_change(ids.fill, "scale", {x = frac, y = 1})
-
-    c.chat_send_player(name, ("scale = %.2f"):format(frac))
 end
 
 -- chamado pelo entities.lua quando o boss morre -- some a barra na hora

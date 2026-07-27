@@ -658,7 +658,6 @@ c.register_entity("grandchaos:boss", {
 		self:set_anim("stand")
 	end,
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir, damage)
-		c.chat_send_all("[DEBUG] boss on_punch chamado! damage="..tostring(damage))  -- REMOVER esta linha daqui
 		local final_damage = damage or 1
 		if puncher and puncher:is_player() then
 			local pname = puncher:get_player_name()

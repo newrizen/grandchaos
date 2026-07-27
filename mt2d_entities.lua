@@ -17,6 +17,9 @@ minetest.register_entity("grandchaos:cam",{
 		self.dmgtimer=0
 		self.breath=11
 		self.user_pos={x=0,y=0,z=0}
+		self.facing=1          -- direção que o personagem olha (1 = "left key"/+x, -1 = "right key"/-x)
+		self.double_jump_used=false
+		self.jump_was_down=false   -- NOVO
 		self.powersaving={dir=0,x=0,y=0,timer=0,timeout=0.1,time=0,count=5}
 		return self
 	end,
@@ -56,6 +59,10 @@ minetest.register_entity("grandchaos:cam",{
 		local pos2=self.ob:get_pos()
 		local key=self.user:get_player_control()
 		local now = minetest.get_us_time() / 1000000
+		
+		local jump_pressed = key.up or key.jump                -- NOVO
+		local jump_edge = jump_pressed and not self.jump_was_down  -- NOVO
+		self.jump_was_down = jump_pressed                       -- NOVO
 
 		if key.left and not self.left_was_down then
 		    if now - self.last_left_press <= self.dash_window then self.running = -1 end
@@ -74,6 +81,7 @@ minetest.register_entity("grandchaos:cam",{
 		elseif self.running == 1 and not key.right then self.running = 0
 		end
 		local v=self.ob:get_velocity()
+		if v.y==0 and not self.floating then self.double_jump_used=false end   -- MOVIDO pra cá
 		if not pos2 then
 			local user=self.user
 			self.object:remove()
@@ -198,13 +206,30 @@ minetest.register_entity("grandchaos:cam",{
 				pob.laying_sound_played=false
 				self.ob:set_acceleration({x=0,y=-20,z=0})
 			end
-		elseif key.up and (v.y==0 or self.floating) and self.jump_timer <= 0 then
+
+		elseif (key.up or key.jump) and (v.y==0 or self.floating) and self.jump_timer <= 0 then
+			-- Pulo normal (do chão)
 			self.jump_timer = 0.05
-			v.y=12
-		elseif key.jump and (v.y==0 or self.floating) and self.jump_timer <= 0 then
-			self.jump_timer = 0.05
-			v.y=12
+			v.y = 12
+
+		elseif jump_edge and v.y ~= 0 and not self.floating and not self.double_jump_used then
+			-- Segundo pulo: só é permitido se houver uma parede logo na frente
+			-- (na direção que o personagem está olhando).
+			local facing = self.facing or 1
+			local ahead_pos = {x = pos2.x + facing, y = pos2.y, z = pos2.z}
+			local ahead_node = minetest.registered_nodes[minetest.get_node(ahead_pos).name]
+
+			if ahead_node and ahead_node.walkable then
+				self.double_jump_used = true
+				v.y = 12
+				if math.abs(v.x) > 0.1 then
+					v.x = -v.x
+				else
+					v.x = -facing * self.run_speed
+				end
+			end
 		elseif key.left then
+		    self.facing = 1        -- NOVO
 		    if self.running == -1 then
 			v.x = self.run_speed
 			mt2d.player_anim(self, "run")
@@ -219,6 +244,7 @@ minetest.register_entity("grandchaos:cam",{
 		    self.ob:set_yaw(4.71)
 
 		elseif key.right then
+		    self.facing = -1        -- NOVO
 		    if self.running == 1 then
 			v.x = -self.run_speed
 			mt2d.player_anim(self, "run")
