@@ -49,6 +49,16 @@ end)
 
 mt2d.new_player=function(player)
 	player:get_meta():set_string("mt2d_active","1")
+	-- to_3dplayer marca mt2d.user3d[name] ao converter para 3D, e usa essa
+	-- marca como trava para não rodar duas vezes seguidas (ver "if
+	-- mt2d.user3d[name] then return end" logo abaixo). Sem limpar aqui, um
+	-- jogador que já saiu do 2D uma vez (ex.: 1º portal do grandchaos) e
+	-- entra de novo (2ª corrida) ficava com essa trava "presa": na
+	-- próxima saída, to_3dplayer via mt2d.user3d[name] ainda preenchido e
+	-- retornava sem fazer nada — sem set_detach() (corpo/item sumindo,
+	-- ainda anexados à câmera 2D) e sem zerar mt2d_active na meta (então
+	-- o 2D voltava sozinho até ao relogar).
+	mt2d.user3d[player:get_player_name()]=nil
 	local pos=player:get_pos()
 	pos={x=pos.x,y=pos.y,z=0}
 	for i=0,100,1 do
@@ -131,16 +141,6 @@ end)
 minetest.register_on_respawnplayer(function(player)
 	local name=player:get_player_name()
 	if not (grandchaos and grandchaos.is_phase_active and grandchaos.is_phase_active(name)) then return end
-	-- Removido o antigo "minetest.after(0, ...)" que jogava o jogador para
-	-- z=5 logo após o respawn: essa faixa de z fica fora do chão que
-	-- build_corridor_shell constrói (só cobre z entre bg3_z e max_z, perto
-	-- de z=0), e como o jogador acabou de ser desanexado da câmera antiga
-	-- (register_on_dieplayer chama player:set_detach()), ele ficava caindo
-	-- livremente nesse vazio por ~1s até o mt2d.new_player abaixo resetar
-	-- o z de volta para 0 — daí a câmera parecer "cair do céu" a cada
-	-- morte. O grandchaos.register_on_respawnplayer (init.lua) já
-	-- reposiciona o jogador corretamente antes deste callback rodar, então
-	-- não há necessidade de mexer no z aqui.
 	minetest.after(1, function(player) mt2d.new_player(player) end,player)
 end)
 

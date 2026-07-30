@@ -1,4 +1,6 @@
-minetest.register_entity("grandchaos:cam",{
+-- Mod mt2d_entities.lua
+local c = core
+c.register_entity("grandchaos:cam",{
 	hp_max = 99999,
 	collisionbox = {0,0,0,0,0,0},
 	visual = "sprite",
@@ -27,56 +29,41 @@ minetest.register_entity("grandchaos:cam",{
 		if self.powersaving.timeout>0 then
 			self.powersaving.timeout=self.powersaving.timeout-dtime
 			return self
-		elseif not (self.user and mt2d.user[self.username] and mt2d.user[self.username].id==self.id ) then
-			self.object:remove()
-			return self
+		elseif not (self.user and mt2d.user[self.username] and mt2d.user[self.username].id==self.id ) then self.object:remove() return self
 		elseif not (self.ob and self.ob:get_luaentity()) then
 			local pos=self.object:get_pos()
-			self.ob=minetest.add_entity({x=pos.x,y=pos.y+1,z=pos.z-5}, "grandchaos:player")
-
+			self.ob=c.add_entity({x=pos.x,y=pos.y+1,z=pos.z-5}, "grandchaos:player")
 			self.ob:get_luaentity().user=self.user
 			self.ob:get_luaentity().id=self.id
 			self.ob:get_luaentity().username=self.username
-
-			self.fly=minetest.check_player_privs(self.username, {fly=true})
-			self.noclip=minetest.check_player_privs(self.username, {noclip=true})
-
+			self.fly=c.check_player_privs(self.username, {fly=true})
+			self.noclip=c.check_player_privs(self.username, {noclip=true})
 			self.ob:set_properties({
 				textures={"mt2d_air.png",mt2d.user[self.username].texture},
 				nametag=self.username,
 				nametag_color="#FFFFFF",
 			})
-
-			self.user:set_properties({
-				textures="mt2d_air.png",
-				nametag="",
-			})
-
+			self.user:set_properties({textures="mt2d_air.png", nametag=""})
 			mt2d.user[self.username].object=self.ob
 		end
 
 		local pos=self.object:get_pos()
 		local pos2=self.ob:get_pos()
 		local key=self.user:get_player_control()
-		local now = minetest.get_us_time() / 1000000
-		
-		local jump_pressed = key.up or key.jump                -- NOVO
-		local jump_edge = jump_pressed and not self.jump_was_down  -- NOVO
-		self.jump_was_down = jump_pressed                       -- NOVO
-
+		local now = c.get_us_time() / 1000000
+		local jump_pressed = key.up or key.jump   
+		local jump_edge = jump_pressed and not self.jump_was_down 
+		self.jump_was_down = jump_pressed 
 		if key.left and not self.left_was_down then
 		    if now - self.last_left_press <= self.dash_window then self.running = -1 end
 		    self.last_left_press = now
 		end
-
 		if key.right and not self.right_was_down then
 		    if now - self.last_right_press <= self.dash_window then self.running = 1
 		    end self.last_right_press = now
 		end
-
 		self.left_was_down = key.left
 		self.right_was_down = key.right
-
 		if self.running == -1 and not key.left then self.running = 0
 		elseif self.running == 1 and not key.right then self.running = 0
 		end
@@ -88,8 +75,8 @@ minetest.register_entity("grandchaos:cam",{
 			user:set_hp(0)
 			return
 		end
-		local node=minetest.registered_nodes[minetest.get_node({x=pos2.x,y=pos2.y-1,z=0}).name]
-		local node2=minetest.registered_nodes[minetest.get_node({x=pos2.x,y=pos2.y+1,z=0}).name]
+		local node=c.registered_nodes[c.get_node({x=pos2.x,y=pos2.y-1,z=0}).name]
+		local node2=c.registered_nodes[c.get_node({x=pos2.x,y=pos2.y+1,z=0}).name]
 
 		if not (node and node2) then return end
 
@@ -133,12 +120,11 @@ minetest.register_entity("grandchaos:cam",{
 			local hit=math.floor(pos.y+0.5)
 			local d=from-hit
 			self.fallingfrom=nil
-			if minetest.get_node({x=pos2.x,y=pos2.y-2,z=0}).name~="ignore" and d>=10 then mt2d.punch(self.ob,self.ob,d) end
+			if c.get_node({x=pos2.x,y=pos2.y-2,z=0}).name~="ignore" and d>=10 then mt2d.punch(self.ob,self.ob,d) end
 		end
 --input & anim
 		local pob=self.ob:get_luaentity()
 		local staggered=pob.stagger_timer and pob.stagger_timer>0
-
 		-- solta a trava do último frame do "sneak" assim que o jogador
 		-- deixa de segurar shift/S, pra animação poder tocar de novo da
 		-- próxima vez que ele agachar parado
@@ -158,20 +144,17 @@ minetest.register_entity("grandchaos:cam",{
 			self.ob:set_properties({collide_with_objects=true})
 		end
 		if staggered then self.was_staggered=true end
-
 		if self.ob:get_luaentity().dead or mt2d.attach[self.username] then
 			self.object:set_velocity({x=((pos2.x-pos.x)*10)+self.user_pos.x,y=(-0.5+(pos2.y-pos.y))*10,z=(5-(pos.z-pos2.z))*10})
 			return self
 			elseif staggered then
-				-- Não deixa o jogador controlar o personagem, mas preserva o impulso do golpe.
-				v = self.ob:get_velocity()
-				-- Apenas reduz um pouco a velocidade horizontal, simulando atrito enquanto desliza.
-				v.x = v.x * 0.985
+				v = self.ob:get_velocity() -- Não deixa o jogador controlar o personagem, mas preserva o impulso do golpe.
+				v.x = v.x * 0.985 -- Apenas reduz um pouco a velocidade horizontal, simulando atrito enquanto desliza.
 				self.ob:set_acceleration({x=0,y=-20,z=0})
 			if not pob.stagger_anim_played then
 				pob.stagger_anim_played=true
 				mt2d.player_anim(self,"lay")
-				minetest.sound_play("character_die", {object=self.ob, gain=0.5, max_hear_distance=16}, true)
+				c.sound_play("character_die", {object=self.ob, gain=0.25, max_hear_distance=16}, true)
 				-- mt2d.player_anim liga a animação com loop (igual faz pra
 				-- "walk"/"stand"), mas "lay" aqui é a queda, não deve
 				-- repetir -- força frame_loop=false pra tocar uma vez e
@@ -198,7 +181,7 @@ minetest.register_entity("grandchaos:cam",{
 			mt2d.player_anim(self,"lay")
 			if not pob.laying_sound_played then
 				pob.laying_sound_played=true
-				minetest.sound_play("character_die", {object=self.ob, gain=0.5, max_hear_distance=16}, true)
+				c.sound_play("character_die", {object=self.ob, gain=0.5, max_hear_distance=16}, true)
 			end
 			if key.up or key.left or key.right or self.wakeup then
 				self.laying=nil
@@ -217,15 +200,12 @@ minetest.register_entity("grandchaos:cam",{
 			-- (na direção que o personagem está olhando).
 			local facing = self.facing or 1
 			local ahead_pos = {x = pos2.x + facing, y = pos2.y, z = pos2.z}
-			local ahead_node = minetest.registered_nodes[minetest.get_node(ahead_pos).name]
-
+			local ahead_node = c.registered_nodes[c.get_node(ahead_pos).name]
 			if ahead_node and ahead_node.walkable then
 				self.double_jump_used = true
 				v.y = 12
-				if math.abs(v.x) > 0.1 then
-					v.x = -v.x
-				else
-					v.x = -facing * self.run_speed
+				if math.abs(v.x) > 0.1 then v.x = -v.x
+				else v.x = -facing * self.run_speed
 				end
 			end
 		elseif key.left then
@@ -242,7 +222,6 @@ minetest.register_entity("grandchaos:cam",{
 			mt2d.player_anim(self, "walk")
 		    end
 		    self.ob:set_yaw(4.71)
-
 		elseif key.right then
 		    self.facing = -1        -- NOVO
 		    if self.running == 1 then
@@ -272,9 +251,9 @@ minetest.register_entity("grandchaos:cam",{
 			v.x=0
 			if not pob.punch_anim_played then
 				pob.punch_anim_played=true
-				minetest.sound_play("character_punch", {object=self.ob, gain=0.1, max_hear_distance=16}, true)
+				c.sound_play("character_punch", {object=self.ob, gain=0.05, max_hear_distance=16}, true)
 			end
-		elseif key.aux1 and 	minetest.check_player_privs(self.username, {leave2d=true}) then
+		elseif key.aux1 and 	c.check_player_privs(self.username, {leave2d=true}) then
 			mt2d.to_3dplayer(self.user)
 			return
 		else
@@ -353,7 +332,7 @@ minetest.register_entity("grandchaos:cam",{
 	type="npc",
 })
 
-minetest.register_entity("grandchaos:player",{
+c.register_entity("grandchaos:player",{
 	hp_max = 20,
 	physical = true,
 	collisionbox = {-0.15,-1,-0.15,0.15,0.7,0.15},
@@ -370,7 +349,8 @@ minetest.register_entity("grandchaos:player",{
 	end,
 	on_punch=function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		if not self.user then self.object:remove()
-		elseif not (puncher:is_player() and puncher:get_player_name(puncher)==self.username) and tool_capabilities and tool_capabilities.damage_groups and tool_capabilities.damage_groups.fleshy then
+		elseif not (puncher:is_player() and puncher:get_player_name(puncher)==self.username) and tool_capabilities
+			and tool_capabilities.damage_groups and tool_capabilities.damage_groups.fleshy then
 			self.user:set_hp(self.user:get_hp()-tool_capabilities.damage_groups.fleshy)
 		end
 		return self
@@ -431,7 +411,7 @@ minetest.register_entity("grandchaos:player",{
 			-- cada on_step enquanto o hp continuar <=0)
 			if not self.die_sound_played then
 				self.die_sound_played=true
-				minetest.sound_play("character_die", {object=self.object, gain=0.5, max_hear_distance=16}, true)
+				c.sound_play("character_die", {object=self.object, gain=0.5, max_hear_distance=16}, true)
 			end
 		elseif self.timer>3 then
 			self.timer=0
@@ -452,7 +432,7 @@ minetest.register_entity("grandchaos:player",{
 -- on_punch dela (nunca é chamado nesse fluxo). on_punchplayer é quem
 -- realmente dispara nesse caso, e aqui aplicamos o impulso na entidade
 -- visual (self.ob), que é o que o cam.on_step já está lendo.
-minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
+c.register_on_punchplayer(function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
 	if not (tool_capabilities and tool_capabilities.damage_groups and tool_capabilities.damage_groups.fleshy) then return end
 	local name=player:get_player_name()
 	local u=mt2d.user[name]
@@ -463,7 +443,7 @@ minetest.register_on_punchplayer(function(player, hitter, time_from_last_punch, 
 	local pob=ob:get_luaentity()
 	-- já está em stagger: intangível, não conta hit nem sofre novo recuo
 	if pob.stagger_timer>0 then return end
-	local now=minetest.get_us_time()/1e6
+	local now=c.get_us_time()/1e6
 	if (now-pob.last_hit_time)<=pob.hit_window then pob.hit_count=pob.hit_count+1
 	else pob.hit_count=1
 	end
@@ -495,7 +475,7 @@ end)
 
 -- Enquanto o stagger estiver ativo, nenhum dano é aplicado (jogador
 -- "intangível" a ataques também no sentido de dano, não só de colisão)
-minetest.register_on_player_hpchange(function(player, hp_change, reason)
+c.register_on_player_hpchange(function(player, hp_change, reason)
 	if hp_change>=0 then return hp_change end
 	local u=mt2d.user[player:get_player_name()]
 	if not (u and u.object and u.object:get_luaentity()) then return hp_change end
@@ -504,7 +484,7 @@ minetest.register_on_player_hpchange(function(player, hp_change, reason)
 	return hp_change
 end, true)
 
-minetest.register_entity("grandchaos:boat",{
+c.register_entity("grandchaos:boat",{
 	hp_max = 10,
 	physical = true,
 	visual =  "upright_sprite",
@@ -539,7 +519,7 @@ minetest.register_entity("grandchaos:boat",{
 			if puncher:get_inventory() then
 				puncher:get_inventory():add_item("main","boats:boat")
 			else
-				minetest.add_item(self.object:get_pos(),"boats:boat")
+				c.add_item(self.object:get_pos(),"boats:boat")
 			end
 			self.object:remove()
 		elseif self.object:get_hp()-tool_capabilities.damage_groups.fleshy<=0 then
@@ -559,8 +539,8 @@ minetest.register_entity("grandchaos:boat",{
 		end
 		local v=self.object:get_velocity()
 		local pos=self.object:get_pos()
-		local l=minetest.registered_nodes[minetest.get_node({x=pos.x,y=pos.y,z=0}).name]
-		local lu=minetest.registered_nodes[minetest.get_node({x=pos.x,y=pos.y-1,z=0}).name]
+		local l=c.registered_nodes[c.get_node({x=pos.x,y=pos.y,z=0}).name]
+		local lu=c.registered_nodes[c.get_node({x=pos.x,y=pos.y-1,z=0}).name]
 
 		if l and l.liquid_viscosity>0 then 
 			v.y=1
@@ -598,7 +578,7 @@ minetest.register_entity("grandchaos:boat",{
 		end
 
 		local key=self.user:get_player_control()
-		local now = minetest.get_us_time() / 1e6
+		local now = c.get_us_time() / 1e6
 		-- Detecta o segundo toque para correr
 		if key.left and not self.left_was_down then
 			if now - self.last_left_press <= self.dash_window then self.running = -1 end
@@ -634,15 +614,15 @@ minetest.register_entity("grandchaos:boat",{
 	team="Sam",
 })
 
-minetest.after(0.1, function()
-	minetest.override_item("boats:boat", {
+c.after(0.1, function()
+	c.override_item("boats:boat", {
 		on_place=function(itemstack, user, pointed_thing)
 			local pos=pointed_thing.under
 			if not pos then return end
-			local l=minetest.registered_nodes[minetest.get_node(pos).name]
+			local l=c.registered_nodes[c.get_node(pos).name]
 			if not (l and l.liquid_viscosity>0) then return end
 			itemstack:take_item()
-			minetest.add_entity({x=pos.x,y=pos.y,z=0.05}, "grandchaos:boat")
+			c.add_entity({x=pos.x,y=pos.y,z=0.05}, "grandchaos:boat")
 			return itemstack
 		end,
 	})
@@ -656,10 +636,10 @@ mt2d.dot=function(pos,v)
 		if not n or n==0 or n>8 then n=1 end
 		a=a .. string.sub("13579bdf",n,n):rep(2)
 	end
-	minetest.add_entity(pos, "grandchaos:dot"):set_properties({textures = {"bubble.png^[colorize:#"..a}})
+	c.add_entity(pos, "grandchaos:dot"):set_properties({textures = {"bubble.png^[colorize:#"..a}})
 end
 
-minetest.register_entity("grandchaos:dot",{
+c.register_entity("grandchaos:dot",{
 	hp_max = 1,
 	physical = false,
 	collisionbox = {0,0,0,0,0,0},
@@ -675,7 +655,7 @@ minetest.register_entity("grandchaos:dot",{
 	timer=0,
 })
 
-minetest.register_entity("grandchaos:cart",{
+c.register_entity("grandchaos:cart",{
 	hp_max = 10,
 	physical = false,
 	visual =  "upright_sprite",
@@ -721,7 +701,7 @@ minetest.register_entity("grandchaos:cart",{
 			if puncher:get_inventory() then
 				puncher:get_inventory():add_item("main","carts:cart")
 			else
-				minetest.add_item(self.object:get_pos(),"carts:cart")
+				c.add_item(self.object:get_pos(),"carts:cart")
 			end
 			self.object:remove()
 		elseif self.object:get_hp()-tool_capabilities.damage_groups.fleshy<=0 then
@@ -811,7 +791,7 @@ minetest.register_entity("grandchaos:cart",{
 		if not self.next_pos then
 			return
 		end
-		local rail=minetest.get_node(pos).name
+		local rail=c.get_node(pos).name
 		local ov=self.v
 
 		if self.v<self.max_speed and ((pos.y>self.next_pos.y) or rail=="carts:powerrail") then
@@ -820,7 +800,7 @@ minetest.register_entity("grandchaos:cart",{
 		elseif self.v>-self.max_speed and ((pos.y<self.next_pos.y) or rail=="carts:brakerail") then
 			self.v=self.v*0.99
 			self.v=math.floor(self.v*100)/100
-		elseif minetest.get_node(self.next_pos).name=="grandchaos:stoprail" then
+		elseif c.get_node(self.next_pos).name=="grandchaos:stoprail" then
 			self.v=0.1
 			if self.user then 
 				self.on_rightclick(self, self.user)
@@ -838,17 +818,17 @@ minetest.register_entity("grandchaos:cart",{
 	team="Sam",
 })
 
-minetest.after(0.1, function()
-	minetest.override_item("carts:cart", {
+c.after(0.1, function()
+	c.override_item("carts:cart", {
 		on_place=function(itemstack, user, pointed_thing)
-			if minetest.get_item_group(minetest.get_node(pointed_thing.under).name,"rail")==0 then return end
+			if c.get_item_group(c.get_node(pointed_thing.under).name,"rail")==0 then return end
 			itemstack:take_item()
 			local p=pointed_thing.under
-			minetest.add_entity({x=p.x,y=p.y,z=0.1}, "grandchaos:cart")
+			c.add_entity({x=p.x,y=p.y,z=0.1}, "grandchaos:cart")
 			return itemstack
 		end,
 	})
-	minetest.override_item("carts:rail",{groups={dig_immediate=2,rail=1,connect_to_raillike=minetest.raillike_group("rail")}})
-	minetest.override_item("carts:powerrail",{groups={dig_immediate=2,rail=1,connect_to_raillike=minetest.raillike_group("rail")}})
-	minetest.override_item("carts:brakerail",{groups={dig_immediate=2,rail=1,connect_to_raillike=minetest.raillike_group("rail")}})
+	c.override_item("carts:rail",{groups={dig_immediate=2,rail=1,connect_to_raillike=c.raillike_group("rail")}})
+	c.override_item("carts:powerrail",{groups={dig_immediate=2,rail=1,connect_to_raillike=c.raillike_group("rail")}})
+	c.override_item("carts:brakerail",{groups={dig_immediate=2,rail=1,connect_to_raillike=c.raillike_group("rail")}})
 end)

@@ -978,15 +978,24 @@ c.register_globalstep(function(dtime)
 						c.chat_send_player(pname, S("Sneak to leave the stage and return to the start"))
 					end
 					if sneak_edge then
-						data.finished = true
-						c.chat_send_player(pname, S("You left the stage."))
-						safe_teleport_to_spawn(player, pname, function()
-							local d = players_data[pname]
-							if d then
-								restore_arena(d)
-								players_data[pname] = nil
-							end
-						end)
+					    data.finished = true
+					    c.chat_send_player(pname, S("You left the stage."))
+					    -- Igual à saída pelo bloco do chefe: sem isso o jogador
+					    -- ficava preso no modo 2D ao sair pelo primeiro portal,
+					    -- já que o mt2d só é desativado explicitamente aqui.
+					    safe_teleport_to_spawn(player, pname, function()
+						local d = players_data[pname]
+						if d then
+						    restore_arena(d)
+						    players_data[pname] = nil
+						end
+					    end)
+					    c.after(1.6, function()
+						local p = c.get_player_by_name(pname)
+						if p and mt2d.user[pname] then
+						    mt2d.to_3dplayer(p)
+						end
+					    end)
 					end
 				-- Bloco de POUSO do trecho atual: uma vez aceso (trecho limpo),
 				-- serve para voltar ao FIM do trecho anterior (não ao pouso
